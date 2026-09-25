@@ -9,13 +9,15 @@ public class GuestDocument
     public int Id { get; set; }
 
     [Required] 
-    public string GuestCheckInId { get; set; } = string.Empty;
+    public int GuestCheckInId { get; set; }
     
     [StringLength(100)]
     public string DocumentType { get; set; } = string.Empty;
     
     [StringLength(200)]
-    public string FiletName { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
     
     public DocumentStatus Status { get; set; }
+
+    public GuestCheckIn GuestCheckIn { get; set; } = null!;
 }

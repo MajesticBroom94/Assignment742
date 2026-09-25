@@ -16,5 +16,8 @@ public class Message
     [Required]
     public string Content {get; set;} = string.Empty;
     
-    public DateTime Timestamp {get; set;}
+    public DateTime Timestamp {get; set;} = DateTime.UtcNow;
+    
+    public ApplicationUser? Sender {get; set;}
+    public ApplicationUser? Receiver {get; set;}
 }

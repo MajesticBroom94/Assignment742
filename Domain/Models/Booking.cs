@@ -12,7 +12,7 @@ public class Booking
     public int PropertyId {get; set;}
     
     [Required]
-    public int GuestId {get; set;}
+    public string GuestId {get; set;} = String.Empty;
     
     public DateTime CheckInDate {get; set;}
     
@@ -21,6 +21,10 @@ public class Booking
     public Decimal TotalPrice {get; set;}
     
     public BookingStatus Status {get; set;}
-    
-    
+
+    public GuestCheckIn? GuestCheckIn {get; set;}
+    public HostProperty Property { get; set; } = null!;
+    public ApplicationUser Guest { get; set; } = null!;
+    public Payment? Payment { get; set; }
+
 }

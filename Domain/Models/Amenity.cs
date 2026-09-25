@@ -12,4 +12,6 @@ public class Amenity
     
     [StringLength(50)]
     public string IconClass {get; set;} = string.Empty;
+    
+    public ICollection<HostProperty> HostProperties { get; set; } = new List<HostProperty>();
 }

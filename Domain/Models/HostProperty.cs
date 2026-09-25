@@ -22,6 +22,14 @@ public class HostProperty
     [Required]
     public string Address {get; set;} = string.Empty;
     
+    public CheckInProcess? CheckInProcess { get; set; }
+    public ApplicationUser Host { get; set; } = null!;
     
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<HostApplication> HostApplications { get; set; } = new List<HostApplication>();
+    public ICollection<WishlistItem> WishlistItems { get; set; } = new List<WishlistItem>();
+    public ICollection<PropertyImage> PropertyImages { get; set; } = new List<PropertyImage>();
     
+    public ICollection<Amenity> Amenities { get; set; } = new List<Amenity>();
 }

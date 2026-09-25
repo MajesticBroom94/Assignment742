@@ -11,4 +11,6 @@ public class PropertyImage
     public int PropertyId {get; set;}
     
     public string ImageUrl {get; set;} = string.Empty;
+
+    public HostProperty Property { get; set; } = null!;
 }

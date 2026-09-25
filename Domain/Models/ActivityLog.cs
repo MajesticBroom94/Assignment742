@@ -15,6 +15,8 @@ public class ActivityLog
     public string Action { get; set; } = string.Empty;
     
     public ActivityType ActivityType { get; set; }
-    
-    public DateTime CreatedAt {get; set;}
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ApplicationUser? User {get; set;}
 }

@@ -16,7 +16,11 @@ public class GuestCheckIn
     
     public CheckInStatus Status { get; set; }
     
-    [Required]
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Booking Booking { get; set; } = null!;
+
+    public CheckInProcess? CheckInProcess { get; set; }
     
+    public GuestDocument? GuestDocument { get; set; }
 }

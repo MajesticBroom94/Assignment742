@@ -16,5 +16,7 @@ public class Notification
     
     public NotificationType Type { get; set; }
     
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    public ApplicationUser User { get; set; } = null!;
 }

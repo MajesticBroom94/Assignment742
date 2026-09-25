@@ -17,5 +17,8 @@ public class HostApplication
     [Required]
     public ApplicationStatus Status { get; set; }
     
-    public DateTime AppliedAt { get; set; }
+    public DateTime AppliedAt { get; set; } = DateTime.UtcNow;
+
+    public HostProperty Property { get; set; } = null!;
+    public ApplicationUser ApplicationUser { get; set; } = null!;
 }

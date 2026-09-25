@@ -19,5 +19,8 @@ public class Review
     [StringLength(1000)]
     public string Comment {get; set;} =  string.Empty;
     
-    public DateTime CreatedAt {get; set;}
+    public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
+
+    public HostProperty Property { get; set; } = null!;
+    public ApplicationUser Reviewer { get; set; } = null!;
 }

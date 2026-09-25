@@ -16,5 +16,7 @@ public class Payment
     
     public PaymentStatus Status {get; set;}
     
-    public DateTime CreatedAt {get; set;}
+    public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
+
+    public Booking Booking { get; set; } = null!;
 }
