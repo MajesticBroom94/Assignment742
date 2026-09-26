@@ -1,0 +1,61 @@
+﻿
+
+@{
+    ViewBag.Title = "Host Dashboard";
+}
+
+<div class="dashboard-wrapper" id="dashboardWrapper">
+    <aside class="col-sm-2">
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fas fa-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fas fa-home-alt"></i>
+                <span>My Properties</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="far fa-building"></i>
+                <span>Booking Requests</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Earnings</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fa-solid fa-star fa-lg"></i>
+                <span>Reviews</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fa-solid fa-envelope"></i>
+                <span>Messages</span>
+            </a>
+        </div>
+        <div class="sidebar-item">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fa-solid fa-bell"></i>
+                <span>Notifications</span>
+            </a>
+        </div>
+        <div class="sidebar-item sidebar-item-logout">
+            <a asp-action="Index" asp-controller="Home">
+                <i class="fa fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+    <div class="col-sm-8">
+        <p>Some test text</p>
+    </div>
+</div>
