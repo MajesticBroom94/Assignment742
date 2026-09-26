@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Assignment742.Domain.Enums;
 
 namespace Assignment742.Domain.Models;
 
@@ -21,6 +22,8 @@ public class HostProperty
     
     [Required]
     public string Address {get; set;} = string.Empty;
+    
+    public PropertyStatus Status { get; set; }
     
     public CheckInProcess? CheckInProcess { get; set; }
     public ApplicationUser Host { get; set; } = null!;
