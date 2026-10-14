@@ -1,701 +1,480 @@
-﻿
-@using Assignment742.Domain.Enums
+﻿@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
 @model PropertyDetailsViewModel
 
-<link rel="stylesheet" href="~/css/images.css" />
-<style>
-    input[type="radio"] {
-        appearance: none;
-        outline: 2px solid #333;
-        border: 3px solid white;
-        width: 12px;
-        height: 12px;
-        cursor: pointer;
-    }
-
-    input[type="radio"]:checked {
-        background: #333;
-    }
-    .form-radio {
-        margin-inline-start: 10px;
-    }
-
-
-    .booking-popup {
-        position: fixed;
-        top: 32px;
-        right: 32px;
-
-        display: flex;
-        align-items: center;
-        gap: 18px;
-
-        width: min(520px, calc(100vw - 64px));
-
-        padding: 22px 24px;
-
-        border-radius: 14px;
-
-        background: #fff;
-
-        box-shadow:
-            0 14px 40px rgba(0, 0, 0, 0.18);
-
-        z-index: 9999;
-
-        animation:
-            popup-slide-in 0.35s ease-out forwards;
-    }
-
-    .booking-popup-error {
-        border-left: 5px solid #dc3545;
-    }
-
-    .booking-popup-success {
-        border-left: 5px solid #198754;
-    }
-
-    .booking-popup-icon {
-        flex-shrink: 0;
-        font-size: 22px;
-    }
-
-    .booking-popup-error .booking-popup-icon {
-        color: #dc3545;
-    }
-
-    .booking-popup-success .booking-popup-icon {
-        color: #198754;
-    }
-
-    .booking-popup-content {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-
-        flex: 1;
-    }
-
-    .booking-popup-content strong {
-        font-size: 14px;
-    }
-
-    .booking-popup-content span {
-        color: #555;
-        font-size: 13px;
-    }
-    
-
-    /* Entrance animation */
-
-    @@keyframes popup-slide-in {
-
-        from {
-            opacity: 0;
-            transform: translateX(30px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-    
-    /* Exit animation */
-
-    .booking-popup.popup-closing {
-        animation: popup-slide-out 0.3s ease-in forwards;
-    }
-
-    @@keyframes popup-slide-out {
-
-        from {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        to {
-            opacity: 0;
-            transform: translateX(30px);
-        }
-    }
-
-</style>
-
-
 @{
-    ViewBag.Title = "title";
-    Layout = "_Layout";
+    ViewData["Title"] = Model.Title;
+
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var showBooking = !isAuthenticated || User.IsInRole("Guest");
+
+    Layout = showBooking ? "_HomeLayout" : "_HostLayout";
+
+    var images = (Model.ImageUrls ?? new List<string>())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+
+    var visibleImages = images.Take(5).ToList();
+    var averageRating = Model.ReviewContent.Any()
+        ? Model.ReviewContent.Average(r => r.Rating)
+        : (double?)null;
+
+    var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+    var nextDate = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
 }
+
+<link rel="stylesheet" href="~/css/propertyDetails.css"/>
+<link rel="stylesheet" href="~/css/popup.css"/>
 
 @if (TempData["BookingError"] != null)
 {
-    <div class="booking-popup booking-popup-error">
-        <div class="booking-popup-icon">
-            <i class="fa fa-exclamation-circle"></i>
-        </div>
-
-        <div class="booking-popup-content">
-            <strong>Booking error</strong>
-            <span>@TempData["BookingError"]</span>
-        </div>
+    <div class="custom-popup custom-popup-error" role="alert">
+        <div class="custom-popup-icon"><i class="fa fa-exclamation-circle"></i></div>
+        <div class="custom-popup-content"><strong>Booking error</strong><span>@TempData["BookingError"]</span></div>
     </div>
 }
-
 @if (TempData["BookingConfirmation"] != null)
 {
-    <div class="booking-popup booking-popup-success">
-        <div class="booking-popup-icon">
-            <i class="fa fa-check-circle"></i>
-        </div>
-
-        <div class="booking-popup-content">
-            <strong>Booking confirmed</strong>
-            <span>@TempData["BookingConfirmation"]</span>
-        </div>
+    <div class="custom-popup custom-popup-success" role="status">
+        <div class="custom-popup-icon"><i class="fa fa-check-circle"></i></div>
+        <div class="custom-popup-content"><strong>Booking
+                confirmed</strong><span>@TempData["BookingConfirmation"]</span></div>
     </div>
 }
 
-
-<div class="property-card">
-    <div class="property-media">
-        <img src="@Model.ImageUrls.First()"
-             class="property-image"
-             alt="@Model.Title" />
-
-        <div class="property-meta">
-            <span>
-                <i class="fa fa-star"></i>
-                @Model.Reviews Reviews
-            </span>
-
-            <span>
-                <i class="fa fa-calendar-check"></i>
-                @Model.Bookings Bookings
-            </span>
-        </div>
-    </div>
-
-    <div class="property-details">
-        <div class="property-heading">
-            <div>
-                <h4>@Model.Title</h4>
-                <span>@Model.Address</span>
-            </div>
-
-            <strong>R @(Model.PricePerNight) <span style="font-size: 10px">/night</span> </strong>
-        </div>
-
-        <div class="property-info">
-            <span>
-                <i class="fa fa-users"></i>
-                @Model.MaxGuests Guests
-            </span>
-
-            <span>
-                <i class="fa fa-bath"></i>
-                @Model.Bathrooms Bathrooms
-            </span>
-
-            <span>
-                <i class="fa fa-bed"></i>
-                @Model.Bedrooms Bedrooms
-            </span>
-        </div>
-    </div>
-</div>
-
-<div class="property-card">
-    <table>
-        <tr>
-            <td rowspan="2">
-                <div class="card">
-                    <img src="~/uploads/properties/6a111dcd-ade0-4bc1-9d5f-0168418234db.jpg" alt="" class="card-img">
-                    <div class="overlay">This is test</div>
+<main class="pd-page">
+    <section class="pd-hero" aria-labelledby="property-title">
+        <div class="pd-hero-photo">
+            @if (images.Count > 0)
+            {
+                <img src="@images[0]" alt="@Model.Title"/>
+            }
+            else
+            {
+                <div class="pd-photo-empty"><i class="fa fa-image" aria-hidden="true"></i><span>No property photos available</span>
                 </div>
-            </td>
-            <td>
-                <img src="~/uploads/properties/6a111dcd-ade0-4bc1-9d5f-0168418234db.jpg" alt="" class="property-image">
-            </td>
-            <td>
-                <img src="~/uploads/properties/6a111dcd-ade0-4bc1-9d5f-0168418234db.jpg" alt="" class="property-image">
-            </td>
-        </tr>
-        <tr>
-            <td><img src="~/uploads/properties/6a111dcd-ade0-4bc1-9d5f-0168418234db.jpg" alt="" class="property-image"></td>
-            <td><img src="~/uploads/properties/6a111dcd-ade0-4bc1-9d5f-0168418234db.jpg" alt="" class="property-image"></td>
-        </tr>
-    </table>
-</div>
+            }
+        </div>
+        <div class="pd-hero-body">
+            <div class="pd-eyebrow">Your next stay</div>
+            <h1 id="property-title">@Model.Title</h1>
+            <p class="pd-address"><i class="fa fa-map-marker" aria-hidden="true"></i> @Model.Address</p>
+            <div class="pd-hero-stats">
+                <span><i class="fa fa-users" aria-hidden="true"></i> @Model.MaxGuests guests</span>
+                <span><i class="fa fa-bed" aria-hidden="true"></i> @Model.Bedrooms bedrooms</span>
+                <span><i class="fa fa-bed" aria-hidden="true"></i> @Model.Beds beds</span>
+                <span><i class="fa fa-bath" aria-hidden="true"></i> @Model.Bathrooms bathrooms</span>
+                <span><i class="fas fa-home" aria-hidden="true"></i>@EnumExtension.GetDisplayName(Model.PropertyType)</span>
+            </div>
+            <div class="pd-hero-footer">
+                <div class="pd-social-proof">
+                    <span><i class="fa fa-star" aria-hidden="true"></i> @Model.Reviews reviews</span>
+                    <span><i class="fa fa-calendar-check-o" aria-hidden="true"></i> @Model.Bookings bookings</span>
+                </div>
+                <div class="pd-hero-price"><strong>R @Model.PricePerNight.ToString("N2")</strong><span> / night</span>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<div class="property-card-details">
-    <div class="property-card-col property-card-left">
-        <h2>Description</h2>
-        <p>@Model.Description</p>
-        
-        <h2>Amenities</h2>
-        @foreach (var amenity in Model.Amenities)
+    <section class="pd-gallery-section" aria-labelledby="gallery-heading">
+        <div class="pd-section-heading">
+            <h2 id="gallery-heading">Explore the space</h2>
+            <span>@images.Count @(images.Count == 1 ? "photo" : "photos")</span>
+        </div>
+        @if (images.Count > 0)
         {
-            <div>
-                <i class="@amenity.IconClass"></i>
-                <span>@amenity.Name</span>
-            </div>
-        }
-    </div>
-    <div class="property-card-col property-card-right">
-        <form method="post" asp-controller="Booking" asp-action="Create">
-            <input type="hidden" name="PropertyId" value="@Model.Id" id="propertyId">
-            
-            <!-- Date selecting -->
-            <label>Check in date</label>
-            <input type="date" 
-                   class="form-control" 
-                   id="checkInDate"
-                   name="CheckInDate" 
-                   value="@DateTime.Today.ToString("yyyy-MM-dd")">
-
-            <label>Check out date</label>
-            <input type="date" 
-                   class="form-control"
-                   id="checkOutDate"
-                   name="CheckOutDate" 
-                   value="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")">
-            
-            <!-- Availability output -->
-            <div id="availabilityMessage" class="mb-3"></div>
-            
-            <!-- Guests -->
-            <div class="mb-3">
-                <span>Number of guests:</span>
-
-                <button type="button"
-                        id="decrementGuestButton"
-                        aria-label="Decrease number of guests"
-                        onclick="decrementGuest()">
-                    -
-                </button>
-
-                <span id="guestQuantity">1</span>
-
-                <button type="button"
-                        id="incrementGuestButton"
-                        aria-label="Increase number of guests"
-                        onclick="incrementGuest()">
-                    +
-                </button>
-            </div>
-            
-            <!-- Radio buttons -->
-            <div class="form-radio">
-                <h5>Payment Options</h5>
-                
-                <div id="payNowRadioContent">
-                    <input type="radio"
-                           name="PaymentOption"
-                           value="@PaymentStatus.Completed"
-                           id="payNow"
-                           required="required">
-
-                    <label for="payNow">
-                        <span id="payNowAmount">R 0.00</span> Charged today
-                    </label>
-                </div>
-
-                <div id="payLaterRadioContent">
-                    <input type="radio"
-                           name="PaymentOption"
-                           value="@PaymentStatus.PayLater"
-                           id="payLater"
-                           required="required">
-
-                    <label for="payLater">
-                        <span id="payLaterAmount">R 0.00</span>
-                        Due 7 Days Before Check-in
-                    </label>
-                </div>
-            </div>
-
-            <br>
-            <!-- Cost Breakdown -->
-          
-            <div class="cost-breakdown">
-
-                <h5>Price Details</h5>
-                
-                <p>
-                    <span class="breakdown-row" id="accommodationCostDetails"></span>
-                    <span id="accommodationCost">R 0.00</span>
-                </p>
-
-                <p>
-                    <span class="breakdown-row">Service Fee: </span>
-                    <span id="serviceFee">R 0.00</span>
-                </p>
-
-                <hr/>
-
-                <p>
-                    <strong>Total:</strong>
-                    <strong id="costBreakdownTotal">R 0.00</strong>
-                </p>
-
-            </div>
-            
-            <button type="submit" class="btn btn-primary" id="reserveButton">Reserve</button>
-        </form>
-    </div>
-</div>
-
-<script>
-    // ---------------------------------------------------------
-    // Booking/cart configuration
-    // ---------------------------------------------------------
-
-    const pricePerNight = @Json.Serialize(Model.PricePerNight);
-    const maxGuests = @Model.MaxGuests;
-    const serviceFeeRate = 0.10;
-
-    // ---------------------------------------------------------
-    // Elements
-    // ---------------------------------------------------------
-
-    const propertyIdInput = document.getElementById("propertyId");
-
-    const checkInDateInput = document.getElementById("checkInDate");
-    const checkOutDateInput = document.getElementById("checkOutDate");
-
-    const availabilityMessage = document.getElementById("availabilityMessage");
-
-    const reserveButton = document.getElementById("reserveButton");
-    
-    // Guest counter
-    const decrementGuestButton = document.getElementById("decrementGuestButton");
-
-    const incrementGuestButton = document.getElementById("incrementGuestButton");
-
-    const guestQuantity = document.getElementById("guestQuantity");
-
-   
-    // Reservation cost
-    const accommodationCost = document.getElementById("accommodationCost");
-    
-    const accommodationCostDetails = document.getElementById("accommodationCostDetails");
-
-    const serviceFee = document.getElementById("serviceFee");
-
-    const costBreakdownTotal = document.getElementById("costBreakdownTotal");
-
-    const payNowAmount = document.getElementById("payNowAmount");
-
-    const payLaterAmount = document.getElementById("payLaterAmount");
-
-    // Radios
-    const payNow = document.getElementById("payNow");
-    
-    const payLater = document.getElementById("payLater");
-    
-    const payLaterMessage = document.getElementById("payLaterMessage");
-
-
-    // ---------------------------------------------------------
-    // Guest quantity
-    // ---------------------------------------------------------
-
-    let guestCount = 1;
-
-    function updateGuestQuantity() {
-
-        guestCount = Math.max(1, Math.min(guestCount, maxGuests));
-
-        guestQuantity.textContent = guestCount;
-
-        // Disable buttons at their limits.
-        decrementGuestButton.disabled = guestCount <= 1;
-        incrementGuestButton.disabled = guestCount >= maxGuests;
-    }
-
-
-    function incrementGuest () {
-        if (guestCount < maxGuests) {
-            guestCount++;
-            updateGuestQuantity();
-        }
-    }
-    
-    function decrementGuest() {
-        if (guestCount > 1) {
-            guestCount--;
-            updateGuestQuantity();
-        }
-    }
-    
-    // ---------------------------------------------------------
-    // Cart calculations
-    // ---------------------------------------------------------
-
-    function cartUpdates() {
-
-        const checkInValue = checkInDateInput.value;
-        const checkOutValue = checkOutDateInput.value;
-
-        let nights = 0;
-
-        if (checkInValue && checkOutValue) {
-            const today = new Date();
-            const checkIn = new Date(checkInValue);
-            const checkOut = new Date(checkOutValue);
-
-            today.setHours(0, 0, 0, 0);
-            checkIn.setHours(0, 0, 0, 0);
-            checkOut.setHours(0, 0, 0, 0);
-
-            const isBackdated = checkIn < today;
-            const difference = checkOut - checkIn;
-
-            const calculatedNights = Math.round(difference / (1000 * 60 * 60 * 24));
-
-            if (!isBackdated && calculatedNights > 0) {
-                nights = calculatedNights;
-            }
-        }
-
-        const accommodationTotal = pricePerNight * nights;
-
-        const calculatedServiceFee = accommodationTotal * serviceFeeRate;
-
-        const total = accommodationTotal + calculatedServiceFee;
-        
-        /*Setting outputs*/
-        
-        let textContent = nights === 1 ? " night" : " nights";
-
-        accommodationCostDetails.textContent =  formatCurrency(pricePerNight) + " x " + nights + textContent + ": ";
-        
-        accommodationCost.textContent = formatCurrency(accommodationTotal);
- 
-        serviceFee.textContent = formatCurrency(calculatedServiceFee);
-
-        costBreakdownTotal.textContent = formatCurrency(total);
-
-        
-        // ---------------------------------------------------------
-        // Pay Later availability
-        // ---------------------------------------------------------
-
-        updateRadioContent(checkInValue, total);
-        
-    }
-
-
-    function formatCurrency(amount) {
-
-        return "R " + amount.toFixed(2);
-    }
-
-
-    function formatDate(dateValue) {
-
-        const date = new Date(dateValue + "T00:00:00");
-
-        return date.toLocaleDateString("en-ZA", {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-        });
-    }
-    
-    // --------------------------------------------------------
-    // Pay Later Availability
-    // --------------------------------------------------------
-
-    function updateRadioContent(checkInValue, total) { 
-
-        // Payment options totals
-        payNowAmount.textContent = formatCurrency(total);
-
-        payLaterAmount.textContent = formatCurrency(total);
-        
-        if (checkInValue) {
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const checkInDate = new Date(checkInValue + "T00:00:00");
-
-            const millisecondsPerDay = 1000 * 60 * 60 * 24;
-
-            const daysUntilCheckIn = Math.ceil((checkInDate.getTime() - today.getTime()) / millisecondsPerDay);
-            
-            const payLaterContent = document.getElementById("payLaterRadioContent");
-            
-            // Pay Later is only available when there are
-            // at least 7 full days before check-in.
-            if (daysUntilCheckIn < 7) {
-                payLaterContent.style.display = "none";
-                payLater.disabled = true;
-
-                // If Pay Later was selected, automatically switch to Pay Now.
-                if (payLater.checked) {
-                    payLater.checked = false;
-                    payNow.checked = true;
-                }
-            }
-            else {
-                // Pay Later is valid.
-                payLaterContent.style.display = "block";
-                payLater.disabled = false;
-            }
-        }
-    }
-    
-    // ---------------------------------------------------------
-    // Availability
-    // ---------------------------------------------------------
-
-    async function checkAvailability() {
-
-        const propertyValue = propertyIdInput.value;
-
-        const checkInValue = checkInDateInput.value;
-
-        const checkOutValue = checkOutDateInput.value;
-
-
-        // Don't check until both dates exist.
-        if (!checkInValue || !checkOutValue) {
-            resetAvailability();
-            return;
-        }
-        
-        // Check-out must be after check-in.
-        if (checkOutValue <= checkInValue) {
-
-            showUnavailable(
-                "Check-out date must be after check-in date."
-            );
-
-            return;
-        }
-        
-        const params = new URLSearchParams({
-            PropertyId: propertyValue,
-            CheckInDate: checkInValue,
-            CheckOutDate: checkOutValue
-        });
-        
-        try {
-            reserveButton.disabled = true;
-
-            const response = await fetch(
-                `/Booking/CheckAvailability?${params.toString()}`,
+            <div class="pd-gallery @(visibleImages.Count == 1 ? "pd-gallery-single" : "")">
+                @for (var i = 0; i < visibleImages.Count; i++)
                 {
-                    method: "GET",
-                    headers: {
-                        "Accept": "application/json"
-                    }
+                    <button type="button" class="pd-gallery-item @(i == 0 ? "pd-gallery-featured" : "")"
+                            data-image-index="@i" aria-label="View photo @(i + 1) of @images.Count">
+                        <img src="@visibleImages[i]" alt="@Model.Title photo @(i + 1)"
+                             loading="@(i == 0 ? "eager" : "lazy")"/>
+                        @if (i == 4 && images.Count > 5)
+                        {
+                            <span class="pd-more-photos">+@(images.Count - 5) more</span>
+                        }
+                    </button>
                 }
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    "Availability request failed."
-                );
-            }
-            
-            const result = await response.json();
-            
-            if (result.available) {
-
-                showAvailable(result.message);
-
-            } else {
-
-                showUnavailable(result.message);
-            }
-
-        } catch (error) {
-
-            showUnavailable(
-                "Unable to check availability. Please try again later."
-            );
+            </div>
+            <button class="pd-gallery-all" type="button" id="viewAllPhotos"><i class="fa fa-th" aria-hidden="true"></i>
+                View all photos
+            </button>
         }
-    }
+        else
+        {
+            <div class="pd-gallery-placeholder">Photos haven't been added for this property yet.</div>
+        }
+    </section>
 
+    <div class="pd-content-grid @(showBooking ? "" : "pd-content-grid-full")">
+        <div class="pd-main-content">
+            <section class="pd-panel pd-host" aria-labelledby="host-heading">
+                <div class="pd-host-identity">
+                    @if (!string.IsNullOrWhiteSpace(Model.HostProfilePicture))
+                    {
+                        <img class="pd-host-avatar" src="@Model.HostProfilePicture"
+                             alt="Profile photo of @Model.HostName" loading="lazy"/>
+                    }
+                    else
+                    {
+                        <span class="pd-host-avatar pd-avatar-placeholder" aria-hidden="true"><i class="fa fa-user"></i></span>
+                    }
+                    <div><h2 id="host-heading">Hosted
+                            by @(string.IsNullOrWhiteSpace(Model.HostName) ? "your host" : Model.HostName)</h2>
+                        <p>Your property host</p></div>
+                </div>
+            </section>
 
-    function showAvailable(message) {
+            <section class="pd-panel" aria-labelledby="description-heading">
+                <h2 id="description-heading">About this place</h2>
+                <p class="pd-description">@Model.Description</p>
+                <div class="pd-facts">
+                    <div>
+                        
+                        <i class="fa fa-users" aria-hidden="true"></i>
+                        <span><strong>@Model.MaxGuests</strong> guests</span>
+                    </div>
+                    <div>
+                        <i class="fa fa-bed" aria-hidden="true"></i>
+                        <span><strong>@Model.Beds</strong> beds</span>
+                    </div>
+                    <div>
+                        
+                        <i class="fa fa-home" aria-hidden="true"></i>
+                        <span><strong>@Model.Bedrooms</strong> bedrooms</span>
+                    </div>
+                    <div>
+                        <i class="fa fa-bath" aria-hidden="true"></i>
+                        <span><strong>@Model.Bathrooms</strong> bathrooms</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="pd-panel" aria-labelledby="amenities-heading">
+                <h2 id="amenities-heading">What this place offers</h2>
+                @if (Model.Amenities.Any())
+                {
+                    <div class="pd-amenities">
+                        @foreach (var amenity in Model.Amenities)
+                        {
+                            <div class="pd-amenity">
+                                <i class="@amenity.IconClass" aria-hidden="true"></i>
+                                <span>@amenity.Name</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="pd-muted">No amenities have been listed yet.</p>
+                }
+            </section>
+            
+            <section class="pd-panel" aria-labelledby="reviews-heading">
+                <div class="pd-section-heading">
+                    <h2 id="reviews-heading"><i class="fa fa-star pd-star" aria-hidden="true"></i> Guest reviews</h2>
+                    <span>@Model.Reviews total</span>
+                </div>
+                @if (averageRating.HasValue)
+                {
+                    <p class="pd-review-overview"><strong>@averageRating.Value.ToString("0.0") / 5</strong> average
+                        rating
+                        from @Model.ReviewContent.Count displayed @(Model.ReviewContent.Count == 1 ? "review" : "reviews")
+                    </p>
+                }
+                @if (Model.ReviewContent.Any())
+                {
+                    <div class="pd-reviews">
+                        @foreach (var review in Model.ReviewContent)
+                        {
+                            <article class="pd-review">
+                                <div class="pd-review-header">
+                                    <div>
+                                        
+                                        <strong>@(review.Reviewer.FirstName + " " + review.Reviewer.LastName)</strong><span>@review.CreatedAt.ToString("dd MMM yyyy")</span>
+                                    </div>
+                                    <span class="pd-rating" aria-label="@review.Rating out of 5 stars"><i
+                                            class="fa fa-star" aria-hidden="true"></i> @review.Rating/5</span>
+                                </div>
+                                <p>@review.Comment</p>
+                            </article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="pd-muted">No written reviews are available yet.</p>
+                }
+            </section>
+        </div>
 
-        availabilityMessage.textContent = message;
+        @if (showBooking)
+        {
+            <aside class="pd-booking" aria-labelledby="booking-title">
+                <div class="pd-booking-price"><strong>R @Model.PricePerNight.ToString("N2")</strong><span> / night</span>
+                </div>
+                <h2 id="booking-title">Reserve your stay</h2>
+                <form method="post" asp-controller="Booking" asp-action="Create" id="bookingForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="PropertyId" value="@Model.Id" id="propertyId"/>
+                    <div class="pd-date-grid">
+                        <div>
+                            <label for="checkInDate">Check-in</label>
+                            <input type="date" class="form-control"
+                                   id="checkInDate" name="CheckInDate"
+                                   min="@minDate" value="@minDate" required/>
+                        </div>
+                        <div>
+                            <label for="checkOutDate">Check-out</label>
+                            <input type="date" class="form-control"
+                                   id="checkOutDate" name="CheckOutDate"
+                                   min="@nextDate" value="@nextDate" required/>
+                        </div>
+                    </div>
+                    <div id="availabilityMessage" class="pd-availability" role="status" aria-live="polite"></div>
+                    <div class="pd-guest-row">
+                        <div><strong>Guests</strong><small>Maximum @Model.MaxGuests</small></div>
+                        <div class="pd-counter">
+                            <button type="button" id="decrementGuestButton" aria-label="Decrease guests">−</button>
+                            <output id="guestQuantity">1</output>
+                            <button type="button" id="incrementGuestButton" aria-label="Increase guests">+</button>
+                        </div>
+                    </div>
+                    @* Preserves the existing booking POST fields. Confirm whether your Create action accepts guest count before adding a named input. *@
+                    <fieldset class="pd-payment">
+                        <legend>Payment options</legend>
+                        <label class="pd-payment-option" id="payNowRadioContent">
+                        
+                            <input type="radio" name="PaymentOption"
+                                   value="@PaymentStatus.Completed"
+                                   id="payNow" checked required/>
+                            <span><strong>Pay now</strong>
+                                <small>
+                                    <span id="payNowAmount">R 0.00</span> charged today</small></span>
+                        </label>
+                    
+                        <label class="pd-payment-option" id="payLaterRadioContent"><input type="radio" name="PaymentOption"
+                                                                                          value="@PaymentStatus.PayLater"
+                                                                                          id="payLater"
+                                                                                          required/><span><strong>Pay later</strong><small><span
+                                        id="payLaterAmount">R 0.00</span> due 7 days before check-in</small></span></label>
+                    </fieldset>
+                    <div class="pd-price-breakdown">
+                        <h3>Price details</h3>
+                        <div><span id="accommodationCostDetails">Accommodation</span><span
+                                id="accommodationCost">R 0.00</span></div>
+                        <div><span>Service fee (10%)</span><span id="serviceFee">R 0.00</span></div>
+                        <div class="pd-price-total"><strong>Total</strong><strong id="costBreakdownTotal">R 0.00</strong>
+                        </div>
+                    </div>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <button type="submit" class="pd-reserve-btn" id="reserveButton" disabled>Reserve now</button>
+                    }
+                    else
+                    {
+                        <a class="pd-reserve-btn" asp-controller="Account" asp-action="Login"
+                           asp-route-returnUrl="@Context.Request.Path">Log in to reserve</a>
+                    }
+                    <p class="pd-booking-note">Availability is checked for your selected dates.</p>
+                </form>
+            </aside>
+        }
+    </div>
+</main>
 
-        availabilityMessage.className = "mb-3 text-success";
+@if (images.Count > 0)
+{
+    <div class="pd-lightbox" id="propertyLightbox" role="dialog" aria-modal="true" aria-label="Property photos"
+         aria-hidden="true" hidden>
+        <div class="pd-lightbox-toolbar"><span id="lightboxCounter"></span>
+            <button type="button" id="lightboxClose" aria-label="Close gallery">&times;</button>
+        </div>
+        <button type="button" class="pd-lightbox-arrow pd-lightbox-prev" id="lightboxPrevious"
+                aria-label="Previous photo">&#10094;
+        </button>
+        <img id="lightboxImage" alt="Property photo"/>
+        <button type="button" class="pd-lightbox-arrow pd-lightbox-next" id="lightboxNext" aria-label="Next photo">
+            &#10095;
+        </button>
+    </div>
+}
 
-        reserveButton.disabled = false;
-    }
+<script src="~/js/popup.js"></script>
+<script src="~/js/fetchCheckinProcess.js"></script>
+<script>
+    (() => {
+        const photos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(images));
+        const lightbox = document.getElementById('propertyLightbox');
+        if (lightbox && photos.length) {
+            let index = 0;
+            let previousFocus = null;
+            const image = document.getElementById('lightboxImage');
+            const counter = document.getElementById('lightboxCounter');
+            const closeButton = document.getElementById('lightboxClose');
 
+            function updateImage() {
+                image.src = photos[index];
+                image.alt = `Property photo ${index + 1} of ${photos.length}`;
+                counter.textContent = `${index + 1} / ${photos.length}`;
+            }
 
-    function showUnavailable(message) {
+            function openGallery(selected) {
+                previousFocus = document.activeElement;
+                index = selected;
+                updateImage();
+                lightbox.hidden = false;
+                lightbox.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('pd-modal-open');
+                closeButton.focus();
+            }
 
-        availabilityMessage.textContent = message;
+            function closeGallery() {
+                lightbox.hidden = true;
+                lightbox.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('pd-modal-open');
+                previousFocus?.focus();
+            }
 
-        availabilityMessage.className = "mb-3 text-danger";
+            function step(delta) {
+                index = (index + delta + photos.length) % photos.length;
+                updateImage();
+            }
 
-        reserveButton.disabled = true;
-    }
+            document.querySelectorAll('[data-image-index]').forEach(button => button.addEventListener('click', () => openGallery(Number(button.dataset.imageIndex))));
+            document.getElementById('viewAllPhotos')?.addEventListener('click', () => openGallery(0));
+            closeButton.addEventListener('click', closeGallery);
+            document.getElementById('lightboxPrevious').addEventListener('click', () => step(-1));
+            document.getElementById('lightboxNext').addEventListener('click', () => step(1));
+            lightbox.addEventListener('click', event => {
+                if (event.target === lightbox) closeGallery();
+            });
+            document.addEventListener('keydown', event => {
+                if (lightbox.hidden) return;
+                if (event.key === 'Escape') closeGallery();
+                if (event.key === 'ArrowLeft') step(-1);
+                if (event.key === 'ArrowRight') step(1);
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    closeButton.focus();
+                }
+            });
+        }
 
+        // Only the Guest/anonymous layout contains the booking form.
+        // Keep gallery interactions available to everyone.
+        if (!document.getElementById('bookingForm')) return;
 
-    function resetAvailability() {
+        const pricePerNight = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PricePerNight));
+        const maxGuests = @Model.MaxGuests;
+        const checkIn = document.getElementById('checkInDate');
+        const checkOut = document.getElementById('checkOutDate');
+        const availability = document.getElementById('availabilityMessage');
+        const reserve = document.getElementById('reserveButton');
+        const minus = document.getElementById('decrementGuestButton');
+        const plus = document.getElementById('incrementGuestButton');
+        const quantity = document.getElementById('guestQuantity');
+        const payNow = document.getElementById('payNow');
+        const payLater = document.getElementById('payLater');
+        const money = value => 'R ' + value.toLocaleString('en-ZA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        let guests = 1;
+        let requestVersion = 0;
+        let availableForDates = false;
 
-        availabilityMessage.textContent = "";
+        function updateGuests() {
+            guests = Math.max(1, Math.min(guests, Math.max(1, maxGuests)));
+            quantity.textContent = guests;
+            minus.disabled = guests <= 1;
+            plus.disabled = guests >= maxGuests;
+        }
 
-        availabilityMessage.className = "mb-3";
+        minus.addEventListener('click', () => {
+            guests--;
+            updateGuests();
+        });
+        plus.addEventListener('click', () => {
+            guests++;
+            updateGuests();
+        });
+        updateGuests();
 
-        reserveButton.disabled = true;
-    }
+        const dayNumber = dateString => Date.parse(dateString + 'T00:00:00Z') / 86400000;
 
+        function nightsSelected() {
+            if (!checkIn.value || !checkOut.value || checkIn.value < checkIn.min || checkOut.value <= checkIn.value) return 0;
+            return Math.max(0, dayNumber(checkOut.value) - dayNumber(checkIn.value));
+        }
 
-    // ---------------------------------------------------------
-    // Date events
-    // ---------------------------------------------------------
+        function updatePrice() {
+            const nights = nightsSelected();
+            const accommodation = nights * pricePerNight;
+            const fee = accommodation * 0.10;
+            const total = accommodation + fee;
+            document.getElementById('accommodationCostDetails').textContent = `${money(pricePerNight)} × ${nights} ${nights === 1 ? 'night' : 'nights'}`;
+            document.getElementById('accommodationCost').textContent = money(accommodation);
+            document.getElementById('serviceFee').textContent = money(fee);
+            document.getElementById('costBreakdownTotal').textContent = money(total);
+            document.getElementById('payNowAmount').textContent = money(total);
+            document.getElementById('payLaterAmount').textContent = money(total);
+            const daysToArrival = checkIn.value ? dayNumber(checkIn.value) - dayNumber(checkIn.min) : -1;
+            const canPayLater = nights > 0 && daysToArrival >= 7;
+            document.getElementById('payLaterRadioContent').hidden = !canPayLater;
+            payLater.disabled = !canPayLater;
+            if (!canPayLater && payLater.checked) payNow.checked = true;
+        }
 
-    checkInDateInput.addEventListener(
-        "change",
-        function () {
-            cartUpdates();
+        function setAvailability(message, state) {
+            availability.textContent = message;
+            availability.className = 'pd-availability' + (state ? ` pd-availability-${state}` : '');
+            availableForDates = state === 'success';
+            if (reserve) reserve.disabled = !availableForDates;
+        }
+
+        async function checkAvailability() {
+            const version = ++requestVersion;
+            const nights = nightsSelected();
+            if (!nights) {
+                setAvailability('Choose valid check-in and check-out dates.', 'error');
+                return;
+            }
+            setAvailability('Checking availability…', 'pending');
+            const params = new URLSearchParams({
+                PropertyId: document.getElementById('propertyId').value,
+                CheckInDate: checkIn.value,
+                CheckOutDate: checkOut.value
+            });
+            try {
+                const response = await fetch(`/Booking/CheckAvailability?${params}`, {headers: {Accept: 'application/json'}});
+                if (!response.ok) throw new Error('Availability request failed');
+                const result = await response.json();
+                if (version !== requestVersion) return;
+                setAvailability(result.message || (result.available ? 'Available for your dates.' : 'Not available for these dates.'), result.available ? 'success' : 'error');
+            } catch {
+                if (version === requestVersion) setAvailability('Unable to check availability. Please try again.', 'error');
+            }
+        }
+
+        function updateDates() {
+            if (checkIn.value) {
+                const next = new Date(checkIn.value + 'T12:00:00');
+                next.setDate(next.getDate() + 1);
+                checkOut.min = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+            }
+            updatePrice();
             checkAvailability();
         }
-    );
 
-
-    checkOutDateInput.addEventListener(
-        "change",
-        function () {
-            cartUpdates();
-            checkAvailability();
-        }
-    );
-    
-    // Initial state
-    cartUpdates();
-    
-    
-
-    document.querySelectorAll(".booking-popup").forEach(popup => {
-
-        function closePopup() {
-
-            popup.classList.add("popup-closing");
-
-            popup.addEventListener(
-                "animationend",
-                () => popup.remove(),
-                { once: true }
-            );
-        }
-        
-        // Automatically disappear after timeout
-        setTimeout(closePopup, 6000);
-    });
-
-
+        checkIn.addEventListener('change', updateDates);
+        checkOut.addEventListener('change', updateDates);
+        document.getElementById('bookingForm').addEventListener('submit', event => {
+            if (!availableForDates || !nightsSelected() || !payNow.checked && !payLater.checked) event.preventDefault();
+        });
+        updateDates();
+        if (typeof closePopup === 'function') closePopup();
+    })();
 </script>
-
-
