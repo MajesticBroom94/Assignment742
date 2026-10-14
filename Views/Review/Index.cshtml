@@ -1,0 +1,124 @@
+﻿@model List<HostPropertyReviewViewModel>
+
+@{
+    ViewBag.Title = "Property Reviews";
+    Layout = "_HostLayout";
+
+    double averageRating = ViewBag.AverageRating ?? 0;
+}
+
+<link rel="stylesheet" href="~/css/hostReviews.css" />
+
+<div class="host-reviews-page">
+
+    <div class="reviews-header">
+        <h3>Property Reviews</h3>
+        <p>View feedback received from guests across your properties.</p>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="reviews-summary">
+
+        <div class="review-summary-card">
+            <div class="review-summary-icon">
+                <i class="fa-solid fa-star"></i>
+            </div>
+
+            <div>
+                <span>Average Rating</span>
+
+                <strong>
+                    @averageRating.ToString("N1") / 5
+                </strong>
+            </div>
+        </div>
+
+        <div class="review-summary-card">
+            <div class="review-summary-icon">
+                <i class="fa-solid fa-comment-dots"></i>
+            </div>
+
+            <div>
+                <span>Total Reviews</span>
+                <strong>@Model.Count</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- REVIEW TIMELINE -->
+    <div class="reviews-section-heading">
+        <h4>Review Timeline</h4>
+        <span>@Model.Count Reviews</span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="reviews-empty">
+            <i class="fa-regular fa-comment-dots"></i>
+            <h4>No reviews yet</h4>
+            <p>Reviews from guests will appear here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="reviews-timeline">
+
+            @foreach (var review in Model)
+            {
+                <div class="review-card">
+
+                    <div class="review-card-header">
+
+                        <div class="review-person">
+                            <div class="review-avatar">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+
+                            <div class="review-person-info">
+                                <strong>@review.Reviewer</strong>
+
+                                <span>
+                                    <i class="fa-solid fa-house"></i>
+                                    @review.PropertyTitle
+                                </span>
+                            </div>
+                        </div>
+
+                        <span class="review-date">
+                            <i class="fa-regular fa-calendar"></i>
+                            @review.CreatedAt.ToString("dd MMM yyyy")
+                        </span>
+
+                    </div>
+
+                    <div class="review-rating">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            if (i <= review.Rating)
+                            {
+                                <i class="fa-solid fa-star"></i>
+                            }
+                            else
+                            {
+                                <i class="fa-regular fa-star"></i>
+                            }
+                        }
+
+                        <span>@review.Rating / 5</span>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(review.Comment))
+                    {
+                        <p class="review-comment">
+                            @review.Comment
+                        </p>
+                    }
+
+                </div>
+            }
+
+        </div>
+    }
+
+</div>
