@@ -18,6 +18,8 @@ public class PropertyOverviewViewModel
     
     public PropertyStatus Status { get; set; }
     
+    public PropertyType Type { get; set; }
+    
     public int Beds { get; set; }
     
     public int Bedrooms { get; set; }

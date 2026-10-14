@@ -15,8 +15,6 @@ public class PropertyDetailsViewModel
     
     public string Address {get; set;} = string.Empty;
     
-    public PropertyStatus Status { get; set; }
-    
     public int Beds { get; set; }
     
     public int Bedrooms { get; set; }
@@ -27,12 +25,16 @@ public class PropertyDetailsViewModel
     
     public int Bookings { get; set; }
     public int Reviews { get; set; }
-
+    
+    public string HostName { get; set; } = string.Empty;
+    
+    public string? HostProfilePicture { get; set; } = string.Empty;
+    
+    public PropertyType PropertyType { get; set; }
+    
     public List<Review> ReviewContent { get; set; } = new List<Review>();
 
     public List<Amenity> Amenities { get; set; } = new List<Amenity>();
-
-    public ApplicationUser Host { get; set; } = null!;
 
     public List<string> ImageUrls { get; set; } = null!;
 }

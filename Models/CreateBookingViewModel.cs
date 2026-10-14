@@ -15,5 +15,6 @@ public class CreateBookingViewModel
     [Required]
     public DateTime CheckOutDate {get; set;}
 
+    [Required]
     public PaymentStatus PaymentOption { get; set; }
 }
