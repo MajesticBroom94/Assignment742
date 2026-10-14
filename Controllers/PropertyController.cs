@@ -1,0 +1,699 @@
+﻿using System.Text.Json;
+using Assignment742.Data;
+using Assignment742.Domain.Enums;
+using Assignment742.Domain.Models;
+using Assignment742.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Assignment742.Controllers;
+public class PropertyController : Controller
+{
+    private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<PropertyController> _logger;
+
+    public PropertyController(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        IWebHostEnvironment environment,
+        ILogger<PropertyController> logger)
+    {
+        _context = context;
+        _userManager = userManager;
+        _environment = environment;
+        _logger = logger;
+    }
+
+    public async Task<IActionResult> Index()
+    {
+       var p = await _context.HostProperties.
+                               Where(p => p.HostId == _userManager.GetUserId(User))
+                               .Select(p => new PropertyOverviewViewModel
+                               {
+                                   Id = p.Id,
+                                   Title = p.Title,
+                                   Description = p.Description,
+                                   PricePerNight = p.PricePerNight,
+                                   Address = p.Address,
+                                   Status = p.Status,
+                                   Type = p.Type,
+                                   Beds =  p.Beds,
+                                   Bedrooms =  p.Bedrooms,
+                                   Bathrooms = p.Bathrooms,
+                                   MaxGuests = p.MaxGuests,
+                                   Bookings = p.Bookings.Count,
+                                   Reviews = p.Reviews.Count,
+                                   ImageUrl = p.PropertyImages.Select(pi => pi.ImageUrl).FirstOrDefault() ?? ""
+                               }).ToListAsync();
+       return View(p);
+    }
+
+    public async Task<IActionResult> Details(int? id)
+    {
+        if (id == null)
+            return NotFound();
+        
+        var currentUser = await _userManager.GetUserAsync(User);
+        
+        var p = await _context.HostProperties.
+            Where(p => p.Id == id)
+            .Select(p => new PropertyDetailsViewModel
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description,
+                PricePerNight = p.PricePerNight,
+                Address = p.Address,
+                Beds =  p.Beds,
+                Bedrooms =  p.Bedrooms,
+                Bathrooms = p.Bathrooms,
+                MaxGuests = p.MaxGuests,
+                Bookings = p.Bookings.Count,
+                Reviews = p.Reviews.Count,
+                PropertyType = p.Type,
+                ImageUrls = p.PropertyImages.Select(pi => pi.ImageUrl).ToList(),
+                Amenities = p.Amenities.ToList(),
+                HostName = p.Host.FirstName + " " + p.Host.LastName,
+                HostProfilePicture = p.Host.ProfilePictureUrl ?? "",
+                ReviewContent = p.Reviews
+                                .OrderByDescending(r => r.CreatedAt)
+                                .ThenByDescending(r => r.Id)
+                                .Take(10)
+                                .ToList()
+                
+            }).FirstOrDefaultAsync();
+       
+        if (p == null)
+        {
+            return NotFound();
+        }
+        
+        return View(p);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Search(SearchPropertyViewModel searchParameter)
+    {
+        if (string.IsNullOrWhiteSpace(searchParameter.Address) &&
+            !searchParameter.Type.HasValue &&
+            !searchParameter.GuestCount.HasValue)
+        {
+            return RedirectToAction("Index", "Home");
+        }
+        
+        var user = await _userManager.GetUserAsync(User);
+
+        var query = _context.HostProperties
+            .Where(p => p.Status == PropertyStatus.Active)
+            .AsQueryable();
+
+        // Filter by location if provided
+        if (!string.IsNullOrWhiteSpace(searchParameter.Address))
+        {
+            query = query.Where(p => p.Address
+                          .Contains(searchParameter.Address));
+        }
+
+        // Filter by guest count if provided
+        if (searchParameter.GuestCount.HasValue)
+        {
+            query = query.Where(p => p.MaxGuests >= searchParameter.GuestCount);
+        }
+
+        // Filter by property type if provided
+        if (searchParameter.Type.HasValue)
+        {
+            query = query.Where(p => p.Type == searchParameter.Type);
+        }
+
+        var model = await query
+            .Select(p => new PropertyGuestViewModel
+            {
+                Id = p.Id,
+                Address = p.Address,
+                Title = p.Title,
+                PricePerNight = p.PricePerNight,
+                ImageUrl = p.PropertyImages
+                    .Select(i => i.ImageUrl)
+                    .FirstOrDefault() ?? "",
+                ReviewCount = p.Reviews.Count,
+                Rating = p.Reviews.Any()
+                    ? p.Reviews.Average(r => r.Rating)
+                    : 0.0,
+                IsFavorite = user != null && p.WishlistItems.Any(w => w.UserId == user.Id)
+            })
+            .ToListAsync();
+
+        ViewBag.SearchData = searchParameter;
+        return View(model);
+        
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> Create()
+    {
+        ViewBag.AvailableAmenities = await _context.Amenities.ToListAsync();
+        return View();
+    }
+    
+    
+    [Authorize(Roles = "Guest, Host")]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(CreatePropertyViewModel model)
+    {
+        
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+        foreach (var image in model.Images)
+        {
+            var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                ModelState.AddModelError(
+                    nameof(model.Images),
+                    "Only JPG, PNG and WEBP images are allowed."
+                );
+
+                break;
+            }
+        }
+        
+        ViewBag.AvailableAmenities = await _context.Amenities.ToListAsync();
+        
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var propertyOwner = await _userManager.GetUserAsync(User);
+
+        if (propertyOwner == null) 
+        {
+            return Challenge();
+        }
+
+        var property = new HostProperty
+        {
+            Title = model.Title,
+            Description = model.Description,
+            PricePerNight = model.PricePerNight,
+            Address = model.Address,
+            Type =  model.Type,
+            Beds = model.Beds,
+            Bathrooms = model.Bathrooms,
+            Bedrooms = model.Bedrooms,
+            MaxGuests = model.MaxGuests,
+            HostId = propertyOwner.Id
+        };
+        
+        // Add amenities
+        var amenities = await _context.Amenities
+            .Where(a => model.AmenityIds.Contains(a.Id))
+            .ToListAsync();
+
+        foreach (var amenity in amenities)
+        {
+            property.Amenities.Add(amenity);
+        }
+        
+        // Save property first so it gets an Id
+        _context.HostProperties.Add(property);
+        await _context.SaveChangesAsync();
+
+        // Save uploaded images
+        if (model.Images.Any())
+        {
+            var uploadDirectory = Path.Combine(
+                _environment.WebRootPath,
+                "uploads",
+                "properties");
+
+            Directory.CreateDirectory(uploadDirectory);
+
+            foreach (var image in model.Images)
+            {
+                if (image.Length <= 0)
+                    continue;
+
+                var extension = Path.GetExtension(image.FileName);
+                var fileName = $"{Guid.NewGuid()}{extension}";
+
+                var filePath = Path.Combine(uploadDirectory, fileName);
+
+                await using var stream = new FileStream(
+                    filePath,
+                    FileMode.Create);
+
+                await image.CopyToAsync(stream);
+
+                var propertyImage = new PropertyImage
+                {
+                    PropertyId = property.Id,
+                    ImageUrl = $"/uploads/properties/{fileName}"
+                };
+
+                _context.PropertyImages.Add(propertyImage);
+            }
+        }
+        
+        // save the checkin process
+        
+        var checkInProcess = new CheckInProcess
+        {
+            PropertyId = property.Id,
+            Title = model.CheckInProcessTitle,
+            StepsJson = model.CheckInProcessJson
+        };
+        
+        _context.CheckInProcesses.Add(checkInProcess);
+        
+        // create host application for guest role applicant
+        if (User.IsInRole("Guest"))
+        {
+            var hostApplication = new HostApplication
+            {
+                ApplicationUserId = propertyOwner.Id,
+                PropertyId = property.Id,
+                Status = ApplicationStatus.Pending
+            };
+
+            property.Status = PropertyStatus.AwaitingApproval;
+            _context.HostApplications.Add(hostApplication);
+        }
+        else
+        {
+            property.Status = PropertyStatus.Active;
+        }
+        
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Index));
+    }
+    
+    
+    [HttpGet]
+    public async Task<IActionResult> Update(int propertyId)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+
+        if (currentUser == null)
+        {
+            return Challenge();
+        }
+        
+        var existingProperty = await _context.HostProperties
+            .Where(p => p.Id == propertyId)
+            .Where(p => p.HostId == currentUser.Id)
+            .Select(p => new UpdatePropertyViewModel
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description,
+                Address = p.Address,
+                PricePerNight = p.PricePerNight,
+                Beds = p.Beds,
+                Bathrooms = p.Bathrooms,
+                MaxGuests = p.MaxGuests,
+                Bedrooms = p.Bedrooms,
+                Type = p.Type,
+                CheckInProcessTitle = p.CheckInProcess != null ? p.CheckInProcess.Title : "",
+                CheckInProcessJson = p.CheckInProcess != null ? p.CheckInProcess.StepsJson : "",
+                AmenityIds = p.Amenities.Select(a => a.Id).ToList(),
+                ExistingImageUrls = p.PropertyImages.Select(image => image.ImageUrl).ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (existingProperty == null)
+        {
+            return NotFound();
+        }
+        
+        ViewBag.AvailableAmenities = await _context.Amenities.ToListAsync();
+
+        return View(existingProperty);
+    }
+    
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(
+        int propertyId,
+        UpdatePropertyViewModel model)
+    {
+        if (propertyId != model.Id)
+        {
+            return BadRequest();
+        }
+
+        var currentUser = await _userManager.GetUserAsync(User);
+
+        if (currentUser == null)
+        {
+            return Challenge();
+        }
+
+        // Retrieve property and its relationships.
+        var property = await _context.HostProperties
+            .Include(p => p.Amenities)
+            .Include(p => p.PropertyImages)
+            .Include(p => p.CheckInProcess)
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.HostId == currentUser.Id);
+
+        if (property == null)
+        {
+            return NotFound();
+        }
+
+        // Validate check-in JSON.
+        try
+        {
+            var steps = JsonSerializer.Deserialize<List<string>>(
+                model.CheckInProcessJson);
+
+            if (steps == null)
+            {
+                ModelState.AddModelError(
+                    nameof(model.CheckInProcessJson),
+                    "Invalid check-in instructions.");
+            }
+        }
+        catch (JsonException)
+        {
+            ModelState.AddModelError(
+                nameof(model.CheckInProcessJson),
+                "Invalid check-in instructions.");
+        }
+
+        // Validate uploaded files, if any.
+        var allowedExtensions = new[]
+        {
+            ".jpg", ".jpeg", ".png", ".webp"
+        };
+
+        foreach (var image in model.Images ?? new List<IFormFile>())
+        {
+            var extension = Path.GetExtension(image.FileName)
+                .ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                ModelState.AddModelError(
+                    nameof(model.Images),
+                    "Only JPG, PNG and WEBP images are allowed.");
+
+                break;
+            }
+        }
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.AvailableAmenities = await _context.Amenities.ToListAsync();
+
+            model.ExistingImageUrls = property.PropertyImages
+                .Select(i => i.ImageUrl)
+                .ToList();
+
+            return View(model);
+        }
+
+        // UPDATE BASIC PROPERTY INFORMATION
+        property.Title = model.Title;
+        property.Description = model.Description;
+        property.PricePerNight = model.PricePerNight;
+        property.Address = model.Address;
+        property.Type = model.Type;
+        property.Beds = model.Beds;
+        property.Bedrooms = model.Bedrooms;
+        property.Bathrooms = model.Bathrooms;
+        property.MaxGuests = model.MaxGuests;
+
+        // UPDATE AMENITIES
+        var selectedAmenities = await _context.Amenities
+            .Where(a => model.AmenityIds.Contains(a.Id))
+            .ToListAsync();
+
+        property.Amenities.Clear();
+
+        foreach (var amenity in selectedAmenities)
+        {
+            property.Amenities.Add(amenity);
+        }
+
+        // UPDATE CHECK-IN PROCESS
+        if (property.CheckInProcess != null)
+        {
+            property.CheckInProcess.Title = model.CheckInProcessTitle;
+            property.CheckInProcess.StepsJson = model.CheckInProcessJson;
+        }
+        else
+        {
+            // Handle properties without existing instructions.
+            property.CheckInProcess = new CheckInProcess
+            {
+                PropertyId = property.Id,
+                Title = model.CheckInProcessTitle,
+                StepsJson = model.CheckInProcessJson
+            };
+        }
+
+        // REPLACE IMAGES ONLY IF NEW ONES WERE UPLOADED
+        var uploadedFiles = new List<string>();
+        var oldImageUrls = new List<string>();
+
+        if (model.Images != null && model.Images.Any())
+        {
+            var uploadDirectory = Path.Combine(
+                _environment.WebRootPath,
+                "uploads",
+                "properties");
+
+            Directory.CreateDirectory(uploadDirectory);
+
+            try
+            {
+                // Upload new images before removing old ones.
+                foreach (var image in model.Images)
+                {
+                    if (image.Length <= 0)
+                        continue;
+
+                    var extension = Path.GetExtension(image.FileName)
+                        .ToLowerInvariant();
+
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var filePath = Path.Combine(uploadDirectory, fileName);
+
+                    await using (var stream = new FileStream(
+                        filePath, FileMode.CreateNew))
+                    {
+                        await image.CopyToAsync(stream);
+                    }
+
+                    uploadedFiles.Add(filePath);
+                }
+            }
+            catch
+            {
+                // Remove any newly uploaded files if upload fails.
+                foreach (var file in uploadedFiles)
+                {
+                    if (System.IO.File.Exists(file))
+                    {
+                        System.IO.File.Delete(file);
+                    }
+                }
+
+                throw;
+            }
+
+            // Only replace images if at least one valid file was uploaded.
+            if (uploadedFiles.Any())
+            {
+                oldImageUrls = property.PropertyImages
+                    .Select(i => i.ImageUrl)
+                    .ToList();
+
+                // Remove existing database image records.
+                _context.PropertyImages.RemoveRange(
+                    property.PropertyImages.ToList());
+
+                // Add new database image records.
+                foreach (var filePath in uploadedFiles)
+                {
+                    var fileName = Path.GetFileName(filePath);
+
+                    _context.PropertyImages.Add(new PropertyImage
+                    {
+                        PropertyId = property.Id,
+                        ImageUrl = $"/uploads/properties/{fileName}"
+                    });
+                }
+            }
+        }
+
+        // SAVE DATABASE CHANGES
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Database save failed: clean up newly uploaded files.
+            foreach (var file in uploadedFiles)
+            {
+                if (System.IO.File.Exists(file))
+                {
+                    System.IO.File.Delete(file);
+                }
+            }
+
+            throw;
+        }
+
+        // Database save succeeded: remove old physical image files.
+        foreach (var imageUrl in oldImageUrls)
+        {
+            var fileName = Path.GetFileName(imageUrl);
+
+            var oldFilePath = Path.Combine(
+                _environment.WebRootPath,
+                "uploads",
+                "properties",
+                fileName);
+
+            if (System.IO.File.Exists(oldFilePath))
+            {
+                System.IO.File.Delete(oldFilePath);
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SuspendProperty(int propertyId, PropertyStatus status)
+    {
+        if (status is not (PropertyStatus.Inactive or PropertyStatus.Suspended))
+            return BadRequest();
+
+        var property = await _context.HostProperties
+            .FirstOrDefaultAsync(p => p.Id == propertyId);
+
+        if (property == null)
+            return NotFound();
+
+        // Admin may suspend Active or Inactive properties.
+        if (status == PropertyStatus.Suspended &&
+            property.Status is not (PropertyStatus.Active or PropertyStatus.Inactive))
+        {
+            return BadRequest("This property cannot be suspended.");
+        }
+
+        // Admin may only enable previously suspended properties.
+        if (status == PropertyStatus.Inactive && property.Status != PropertyStatus.Suspended)
+        {
+            return BadRequest("Only suspended properties can be enabled.");
+        }
+
+        property.Status = status;
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = status == PropertyStatus.Suspended
+            ? "Property suspended successfully."
+            : "Property enabled successfully.";
+
+        return RedirectToAction(nameof(Index));
+    }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RejectProperty(int propertyId)
+    {
+        var property = await _context.HostProperties
+            .FirstOrDefaultAsync(p => p.Id == propertyId);
+
+        if (property == null)
+            return NotFound();
+
+        if (property.Status == PropertyStatus.Suspended)
+        {
+            TempData["Error"] = "Property is already suspended.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        property.Status = PropertyStatus.Suspended;
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = "Property suspended successfully.";
+
+        return RedirectToAction(nameof(Index));
+    }
+    
+    
+    [HttpPost]
+    [Authorize(Roles = "Host")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EnableDisableProperty(
+        [FromForm] ChangePropertyStatusRequest? request)
+    {
+        if (request == null ||
+            !ModelState.IsValid ||
+            !request.PropertyId.HasValue ||
+            !request.PropertyStatus.HasValue)
+        {
+            return BadRequest("Missing or invalid parameters.");
+        }
+
+        int propertyId = request.PropertyId.Value;
+        PropertyStatus requestedStatus = request.PropertyStatus.Value;
+
+        if (requestedStatus is not
+            (PropertyStatus.Active or PropertyStatus.Inactive))
+        {
+            return BadRequest("Invalid property status.");
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
+
+        var property = await _context.HostProperties
+            .FirstOrDefaultAsync(p =>
+                p.Id == propertyId &&
+                p.HostId == user.Id);
+
+        if (property == null)
+            return NotFound();
+
+        if (property.Status is not
+            (PropertyStatus.Active or PropertyStatus.Inactive))
+        {
+            TempData["Error"] =
+                "This property's status cannot be changed.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (property.Status != requestedStatus)
+        {
+            property.Status = requestedStatus;
+            await _context.SaveChangesAsync();
+        }
+
+        TempData["Success"] = requestedStatus == PropertyStatus.Active
+            ? "Property enabled successfully."
+            : "Property disabled successfully.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+ }
