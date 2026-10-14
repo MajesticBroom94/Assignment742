@@ -1,0 +1,324 @@
+﻿
+@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model AdminDashboardViewModel
+
+@{
+    ViewBag.Title = "Admin Dashboard";
+    Layout = "_HostLayout";
+}
+
+<link rel="stylesheet" href="~/css/dashboard.css" />
+
+<div class="dashboard-page">
+
+    <!-- PLATFORM STATISTICS -->
+    <div class="dashboard-stat-grid admin-stat-grid">
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Total Users</span>
+
+            <strong class="dashboard-stat-value">
+                @Model.TotalUsers
+            </strong>
+
+            <small class="stat-positive">
+                Registered users
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Pending Host Applications</span>
+
+            <strong class="dashboard-stat-value stat-warning-value">
+                @Model.PendingHostApplications
+            </strong>
+
+            <small class="stat-positive">
+                Require review
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Active Properties</span>
+
+            <strong class="dashboard-stat-value">
+                @Model.ActiveProperties
+            </strong>
+
+            <small class="stat-positive">
+                Listings available
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Platform Revenue</span>
+
+            <strong class="dashboard-stat-value">
+                R @Model.PlatformRevenue.ToString("N2")
+            </strong>
+
+            <small class="stat-positive">
+                Total revenue
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Total Bookings</span>
+
+            <strong class="dashboard-stat-value">
+                @Model.TotalBookings
+            </strong>
+
+            <small class="stat-positive">
+                @Model.PendingBookings pending
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <span class="dashboard-stat-label">Approved Hosts</span>
+
+            <strong class="dashboard-stat-value">
+                @Model.ApprovedHosts
+            </strong>
+
+            <small class="stat-positive">
+                Active host accounts
+            </small>
+        </div>
+
+    </div>
+
+    <!-- RECENT ACTIVITY -->
+    <div class="dashboard-table-section">
+        <h4>Recent Activity</h4>
+
+        <div class="dashboard-table-container">
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (!Model.RecentActivities.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="dashboard-table-empty">
+                                No recent activity.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var activity in Model.RecentActivities)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="dashboard-user-cell">
+                                        <div class="dashboard-avatar">
+                                            <i class="fa-solid fa-user"></i>
+                                        </div>
+
+                                        <div>
+                                            <strong>@activity.UserName</strong>
+                                            <small>@activity.UserEmail</small>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="activity-action">
+                                    @EnumExtension.GetDisplayName(activity.Type)
+                                </td>
+
+                                <td>
+                                    @activity.Date.ToString("dd MMM yyyy")
+                                </td>
+
+                                <td>
+                                    <span class="dashboard-status-badge">
+                                        @activity.Action
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RECENT APPLICATIONS AND BOOKINGS -->
+    <div class="dashboard-tables-grid">
+
+        <!-- HOST APPLICATIONS -->
+        <div class="dashboard-table-section">
+
+            <div class="dashboard-section-heading">
+                <h4>Recent Host Applications</h4>
+
+                <a asp-controller="Host"
+                   asp-action="HostApplication"
+                   class="dashboard-view-all">
+                    View All
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="dashboard-table-container">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Applicant</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (!Model.RecentApplications.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="dashboard-table-empty">
+                                    No applications found.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var application in Model.RecentApplications)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="dashboard-person">
+                                            <strong>
+                                                @application.ApplicantName
+                                            </strong>
+
+                                            <small>
+                                                @application.ApplicantEmail
+                                            </small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        @application.AppliedAt.ToString("dd MMM")
+                                    </td>
+
+                                    <td>
+                                        <span class="dashboard-status-badge">
+                                            @EnumExtension.GetDisplayName(
+                                                application.Status)
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <a asp-controller="Host"
+                                           asp-action="HostApplication"
+                                           asp-route-filterId="@application.ApplicationId"
+                                           class="dashboard-table-action"
+                                           title="View application">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BOOKINGS -->
+        <div class="dashboard-table-section">
+
+            <div class="dashboard-section-heading">
+                <h4>Upcoming Bookings</h4>
+            </div>
+            
+            <div class="dashboard-section-heading">
+                <h4>Recent Host Applications</h4>
+
+                <a asp-controller="Booking"
+                   asp-action="Index"
+                   class="dashboard-view-all">
+                    View All
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="dashboard-table-container">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Guest</th>
+                            <th>Dates</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (!Model.UpcomingBookings.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="dashboard-table-empty">
+                                    No bookings found.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var booking in Model.UpcomingBookings)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="dashboard-person">
+                                            <strong>@booking.GuestName</strong>
+                                            <small>@booking.GuestEmail</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="dashboard-person">
+                                            <strong>
+                                                @booking.CheckInDate.ToString("dd MMM")
+                                            </strong>
+
+                                            <small>
+                                                to @booking.CheckOutDate.ToString("dd MMM")
+                                            </small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="dashboard-status-badge">
+                                            @EnumExtension.GetDisplayName(
+                                                booking.Status)
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <a asp-controller="Booking"
+                                           asp-action="Index"
+                                           asp-route-filterId="@booking.BookingId"
+                                           class="dashboard-table-action"
+                                           title="View booking">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>

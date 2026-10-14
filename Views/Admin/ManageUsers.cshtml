@@ -1,0 +1,154 @@
+﻿
+@model ICollection<UserManagementViewModel>
+
+@{
+    ViewBag.Title = "Manage Users";
+    Layout = "_HostLayout";
+}
+
+<link rel="stylesheet" href="~/css/manageUsers.css" />
+
+<div class="user-management-page">
+
+    <div class="user-page-header">
+        <div>
+            <h3>Manage Users</h3>
+            <p>View users, filter by role and manage administrators.</p>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <!-- ROLE FILTER -->
+    <form asp-action="ManageUsers"
+          method="get"
+          class="user-filter">
+
+        <div class="user-filter-fields">
+
+            <div class="user-filter-group">
+                <label for="role">Filter by Role</label>
+
+                <select id="role"
+                        name="role"
+                        class="form-select"
+                        onchange="this.form.submit()">
+
+                    <option value="">All Roles</option>
+
+                    @foreach (var roleName in (List<string>)ViewBag.AvailableRoles)
+                    {
+                        <option value="@roleName" selected="@(ViewBag.SelectedRole == roleName)"> @roleName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="user-filter-group user-search-group">
+                <label for="search">Search Users</label>
+
+                <div class="user-search-input">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <input type="search"
+                           id="search"
+                           name="search"
+                           value="@ViewBag.Search"
+                           placeholder="Search name or email..." />
+                </div>
+            </div>
+
+            <button type="submit"
+                    name="searchButton"
+                    value="clear"
+                    class="user-search-button">
+                Clear
+            </button>
+            
+            <button type="submit"
+                    name="searchButton"
+                    value="search"
+                    class="user-search-button">
+                Search
+            </button>
+
+        </div>
+
+        <span class="user-count">
+            @Model.Count Users
+        </span>
+
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="user-empty">
+            No users found for the selected role.
+        </div>
+    }
+    else
+    {
+        @foreach (var user in Model)
+        {
+            <div class="user-card">
+
+                <img src="@user.ProfilePictureUrl"
+                     alt="Profile"
+                     class="user-avatar" />
+
+                <div class="user-details">
+                    <h4>@user.FullName</h4>
+
+                    <span>
+                        <i class="fa-regular fa-envelope"></i>
+                        @user.Email
+                    </span>
+                </div>
+                
+                @if (user.Role == "Guest")
+                {
+                    <form asp-action="PromoteToAdmin"
+                          method="post"
+                          onsubmit="return confirm('Promote this Guest to Admin?');">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="userId"
+                               value="@user.UserId" />
+
+                        <button type="submit"
+                                class="user-promote-button">
+
+                            <i class="fa-solid fa-user-shield"></i>
+                            Promote to Admin
+                        </button>
+                    </form>
+                }
+                
+                <a asp-controller="Message" 
+                   asp-action="Chat" 
+                   asp-route-contactId="@user.UserId" class="user-message-button">
+                    <i class="fa-regular fa-comment-dots"></i>
+                    Message User
+                </a>
+                
+                <span class="user-role-badge">
+                    @user.Role
+                </span>
+            </div>
+        }
+    }
+
+</div>
