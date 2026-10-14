@@ -1,0 +1,201 @@
+﻿
+@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model List<Assignment742.Domain.Models.Notification>
+
+@{
+    ViewBag.Title = "Notification Center";
+
+    var isGuest = User.IsInRole("Guest");
+    var isHost = User.IsInRole("Host");
+    var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
+
+    Layout = isGuest ? "_HomeLayout" : "_HostLayout";
+
+    var notifications = Model
+        .Where(n => n.Status != NotificationStatus.Dismissed)
+        .OrderByDescending(n => n.CreatedAt)
+        .ToList();
+
+    var unreadCount = notifications.Count(n =>
+        n.Status == NotificationStatus.Unread);
+}
+
+<link rel="stylesheet" href="~/css/notification.css" />
+
+<div class="notification-page">
+
+    <div class="notification-header">
+        <div>
+            <h3>Notification Center</h3>
+            <p>Stay updated on activity related to your account.</p>
+        </div>
+
+        <span class="notification-count">
+            <i class="fa-regular fa-bell"></i>
+            @unreadCount Unread
+        </span>
+    </div>
+
+    @if (!notifications.Any())
+    {
+        <div class="notification-empty">
+            <i class="fa-regular fa-bell-slash"></i>
+            <h4>You're all caught up!</h4>
+            <p>You don't have any notifications right now.</p>
+        </div>
+    }
+    else
+    {
+        <div class="notification-list">
+
+            @foreach (var notification in notifications)
+            {
+                var isUnread =
+                    notification.Status == NotificationStatus.Unread;
+
+                var iconClass = notification.Type switch
+                {
+                    NotificationType.BookingRequest =>
+                        "fa-regular fa-calendar-check",
+
+                    NotificationType.Review =>
+                        "fa-solid fa-star",
+
+                    NotificationType.Message =>
+                        "fa-regular fa-comment-dots",
+
+                    NotificationType.HostApplication =>
+                        "fa-solid fa-user-check",
+
+                    NotificationType.PropertyStatus =>
+                        "fa-solid fa-house",
+
+                    NotificationType.CheckIn =>
+                        "fa-solid fa-right-to-bracket",
+
+                    NotificationType.CheckOut =>
+                        "fa-solid fa-right-from-bracket",
+
+                    _ => "fa-regular fa-bell"
+                };
+
+                string? actionUrl = null;
+
+                switch (notification.Type)
+                {
+                    case NotificationType.BookingRequest:
+                        actionUrl = isHost
+                            ? Url.Action("BookingRequest", "Booking")
+                            : Url.Action("Index", "Booking");
+                        break;
+
+                    case NotificationType.Review:
+                        if (isHost)
+                            actionUrl = Url.Action("Index", "Review");
+                        break;
+
+                    case NotificationType.HostApplication:
+                        if (isAdmin)
+                            actionUrl = Url.Action(
+                                "HostApplication", "Host");
+                        break;
+
+                    case NotificationType.PropertyStatus:
+                        actionUrl = Url.Action("Index", "Property");
+                        break;
+
+                    case NotificationType.CheckIn:
+                    case NotificationType.CheckOut:
+                        break;
+
+                   case NotificationType.Message:
+                        actionUrl = Url.Action("Index", "Message");
+                        break;
+                }
+
+                <div class="notification-card @(isUnread ? "unread" : "")">
+
+                    <div class="notification-icon">
+                        <i class="@iconClass"></i>
+                    </div>
+
+                    <div class="notification-body">
+
+                        <div class="notification-meta">
+                            <span class="notification-date">
+                                <i class="fa-regular fa-clock"></i>
+                                @notification.CreatedAt.ToString(
+                                    "dd MMM yyyy, HH:mm") UTC
+                            </span>
+
+                            @if (isUnread)
+                            {
+                                <span class="notification-unread-label">
+                                    New
+                                </span>
+                            }
+                        </div>
+
+                        <p class="notification-title">
+                            @notification.Title
+                        </p>
+
+                        <div class="notification-actions">
+
+                            @if (!string.IsNullOrEmpty(actionUrl))
+                            {
+                                <a href="@actionUrl"
+                                   class="notification-view-button">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                    Open @EnumExtension.GetDisplayName(notification.Type)
+                                </a>
+                            }
+
+                            @if (isUnread)
+                            {
+                                <form asp-controller="Notification"
+                                      asp-action="AcknowledgeNotification"
+                                      method="post">
+
+                                    @Html.AntiForgeryToken()
+
+                                    <input type="hidden"
+                                           name="notificationId"
+                                           value="@notification.Id" />
+
+                                    <button type="submit"
+                                            class="notification-read-button">
+                                        <i class="fa-regular fa-circle-check"></i>
+                                        Mark as Read
+                                    </button>
+                                </form>
+                            }
+
+                            <form asp-controller="Notification"
+                                  asp-action="HideNotification"
+                                  method="post">
+
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden"
+                                       name="notificationId"
+                                       value="@notification.Id" />
+
+                                <button type="submit"
+                                        class="notification-dismiss-button"
+                                        title="Dismiss notification"
+                                        aria-label="Dismiss notification">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+
+                        </div>
+                    </div>
+
+                </div>
+            }
+
+        </div>
+    }
+</div>
