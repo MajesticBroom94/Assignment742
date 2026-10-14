@@ -1,0 +1,163 @@
+﻿@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+
+@{
+    var searchData = ViewBag.SearchData as SearchPropertyViewModel;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewData["Title"]</title>
+    
+    <script type="importmap"></script>
+    
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/guestSharedLayout.css" asp-append-version="true"/>
+</head>
+<body>
+<header class="staybnb-header">
+
+    <a asp-controller="Home" asp-action="Index" class="guest-logo">
+        <img src="~/Icons/mainLogo.png" class="staybnb-logo" alt="staybnb logo">
+        <span class="logo-text">staybnb</span>
+    </a>
+    
+    <form class="search-bar" method="get" asp-controller="Property" asp-action="Search">
+        
+        <!-- LOCATION -->
+        <div class="search-bar-item">
+            <label for="location"> Where </label>
+            <input id="location" name="Location" type="text" placeholder="All location" 
+                   value="@(searchData != null? searchData.Address : "")"
+            >
+        </div>
+
+        <div class="vr"></div>
+
+        <!-- GUESTS -->
+        <div class="search-bar-item">
+            <label for="guests"> Guest Count</label>
+            <input id="guests" name="GuestCount" type="number" min="1" placeholder="Any"
+                   style="appearance: textfield" 
+                   value="@(searchData != null ? searchData.GuestCount.ToString() : "")">
+        </div>
+        
+        <div class="vr"></div>
+        
+        <!-- PROPERTY TYPE -->
+        <div class="search-bar-item">
+
+            <label for="propertyDropdownButton">Property Type</label>
+
+            <div class="property-dropdown" id="propertyDropdown">
+                
+                <button type="button" class="property-dropdown-button" id="propertyDropdownButton">
+                    @if (searchData?.Type != null)
+                    {
+                        <span id="propertySelected">@searchData.Type</span>
+                    }
+                    else
+                    {
+                        <span id="propertySelected">Any Type</span>
+                    }
+                    
+                </button>
+                
+                <div class="property-dropdown-menu">
+                    <div class="property-option" data-value="">Any Type</div>
+                    @foreach (var type in Enum.GetValues<PropertyType>())
+                    {
+                        <div class="property-option" data-value="@type">@EnumExtension.GetDisplayName(type)</div>
+                    }
+                </div>
+                
+                <!-- model submission -->
+                <input type="hidden" name="Type" id="propertyType" 
+                       value="@(searchData != null? searchData.Type : "")">
+            </div>
+        </div>
+        
+        <!-- SEARCH -->
+        <div class="search-bar-item search-item">
+
+            <button type="submit" class="search-button" aria-label="Search">
+
+                <img src="~/Icons/search.png" height="24" width="24" alt="search icon" 
+                     style="filter: invert(100%); margin-inline-end: 10px">
+                Search
+            </button>
+        </div>
+    </form>
+    
+    <div class="navbar-actions">
+        
+        <a asp-action="Create" asp-controller="Property" class="navbar-icon long">
+            Become a host
+        </a>
+
+        @if (User.Identity is { IsAuthenticated: true })
+        {
+            <!-- Notifications -->
+            <a asp-controller="Notification" asp-action="Index" class="navbar-icon" aria-label="Notifications">
+                <i class="fa-regular fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge"></span>
+            </a>
+
+            <!-- Messages -->
+            <a asp-controller="Message" asp-action="Index" class="navbar-icon" aria-label="Messages">
+                <i class="fa-regular fa-envelope"></i>
+            </a>
+        }
+
+        <!-- Profile dropdown -->
+        <div class="profile">
+            <button type="button" class="profile-button"
+                    onclick="toggleProfileDropdown()"
+                    id="profileButton"
+                    aria-label="Open profile menu"
+                    aria-expanded="false">
+
+                @if (User.Identity is { IsAuthenticated: true })
+                {
+                    <span class="profile-username"> @(User.Identity.Name ?? "Account") </span>
+                }
+
+                <i class="fa-solid fa-circle-user profile-avatar"></i>
+                <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+            </button>
+
+            <div class="profile-menu">
+                @if (User.Identity is { IsAuthenticated: true })
+                {
+                    <div class="profile-menu-item"> <a asp-controller="Booking" asp-action="Index">Bookings</a> </div>
+                    <div class="profile-menu-item"> <a asp-controller="Account" asp-action="Logout">Log Out</a> </div>
+                }
+                else
+                {
+                    <div class="profile-menu-item"> <a asp-controller="Account" asp-action="Login">Log In</a> </div>
+                    <div class="profile-menu-item"> <a asp-controller="Account" asp-action="Register">Sign Up</a> </div>
+                }
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+</div>
+
+<script src="~/js/HeaderSearchbar.js"></script>
+<script src="~/js/HeaderMenuDropdown.js"></script>
+<script src="~/js/HomeWishlistScript.js"></script>
+<script src="~/js/notificationPolling.js"></script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

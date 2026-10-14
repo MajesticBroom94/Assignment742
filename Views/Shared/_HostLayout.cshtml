@@ -1,0 +1,150 @@
+﻿@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+
+@{
+    var pageTitle= ViewData["Title"];
+    
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["Action"]?.ToString();
+
+    string IsActive(string controller, string action)
+    {
+        return currentController == controller && currentAction == action ? "active" : "";
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@pageTitle</title>
+    
+    <script type="importmap"></script>
+    
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/hostSharedLayout.css" asp-append-version="true"/>
+</head>
+<body>
+<header class="host-header">
+        <a asp-controller="Host" asp-action="Dashboard"
+           class="host-logo">
+            <img src="~/Icons/mainLogo.png"
+                 class="staybnb-logo"
+                 alt="Staybnb logo" />
+            <span>staybnb</span>
+        </a>
+
+        <h1 class="host-page-title">@pageTitle</h1>
+
+        <div class="navbar-actions">
+            @if (User.Identity is { IsAuthenticated: true })
+            {
+                <a asp-controller="Notification" asp-action="Index" class="navbar-icon" aria-label="Notifications">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge"></span>
+                </a>
+
+                <a asp-controller="Message" asp-action="Index" class="navbar-icon" aria-label="Messages">
+                    <i class="fa-regular fa-envelope"></i>
+                </a>
+            }
+
+            <div class="profile">
+                <button type="button"
+                        class="profile-button"
+                        id="profileButton"
+                        onclick="toggleProfileDropdown()"
+                        aria-label="Open profile menu"
+                        aria-expanded="false">
+                    @if (User.Identity is { IsAuthenticated: true })
+                    {
+                        <span class="profile-username">
+                            @(User.Identity.Name ?? "Account")
+                        </span>
+                    }
+
+                    <i class="fa-solid fa-circle-user profile-avatar"></i>
+                    <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                </button>
+
+                <div class="profile-menu">
+                    @if (User.Identity is { IsAuthenticated: true })
+                    {
+                        <div class="profile-menu-item">
+                            <a asp-controller="Account"
+                               asp-action="Index">My Profile</a>
+                        </div>
+                        <div class="profile-menu-item">
+                            <a asp-controller="Account"
+                               asp-action="Logout">Log Out</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="profile-menu-item">
+                            <a asp-controller="Account"
+                               asp-action="Login">Log In</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar + page content -->
+    <div class="host-page">
+        <aside class="host-sidebar">
+            <div class="sidebar-heading">HOST MENU</div>
+
+            <nav class="sidebar-nav">
+                <a asp-controller="Host"
+                   asp-action="Dashboard"
+                   class="sidebar-link @(IsActive("Host","Index"))">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a asp-controller="Property"
+                   asp-action="Index"
+                   class="sidebar-link @(IsActive("Property", "Index"))">
+                    <i class="fa-solid fa-house"></i>
+                    <span>My Properties</span>
+                </a>
+
+                <a asp-controller="Booking"
+                   asp-action="BookingRequest"
+                   class="sidebar-link @(IsActive("Booking", "BookingRequest"))">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Booking Requests</span>
+                </a>
+
+                <a asp-controller="Host"
+                   asp-action="Earnings"
+                   class="sidebar-link @(IsActive("Host", "Earnings"))">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Earnings</span>
+                </a>
+
+                <a asp-controller="Review"
+                   asp-action="Index"
+                   class="sidebar-link @(IsActive("Review", "Index"))">
+                    <i class="fa-solid fa-star"></i>
+                    <span>Reviews</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="host-content">
+            @RenderBody()
+        </main>
+    </div>
+
+<script src="~/js/HeaderMenuDropdown.js"></script>
+<script src="~/js/notificationPolling.js"></script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
