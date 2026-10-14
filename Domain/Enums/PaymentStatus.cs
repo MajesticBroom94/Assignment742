@@ -2,8 +2,7 @@
 
 public enum PaymentStatus
 {
-    Processing,
+    PayLater,
     Completed,
-    Declined,
     Refunded
 }
