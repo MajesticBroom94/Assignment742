@@ -23,7 +23,26 @@ public class HostProperty
     [Required]
     public string Address {get; set;} = string.Empty;
     
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int Beds { get; set; }
+    
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int Bedrooms { get; set; }
+    
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int Bathrooms { get; set; }
+    
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int MaxGuests { get; set; }
+    
     public PropertyStatus Status { get; set; }
+    
+    [Required]
+    public PropertyType Type { get; set; }
     
     public CheckInProcess? CheckInProcess { get; set; }
     public ApplicationUser Host { get; set; } = null!;

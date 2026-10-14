@@ -11,8 +11,7 @@ public class GuestCheckIn
     [Required]
     public int BookingId { get; set; }
     
-    [Required]
-    public int CheckInProcessId { get; set; }
+    public int? CheckInProcessId { get; set; }
     
     public CheckInStatus Status { get; set; }
     

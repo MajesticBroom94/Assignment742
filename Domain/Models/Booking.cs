@@ -26,5 +26,4 @@ public class Booking
     public HostProperty Property { get; set; } = null!;
     public ApplicationUser Guest { get; set; } = null!;
     public Payment? Payment { get; set; }
-
 }
