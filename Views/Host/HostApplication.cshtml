@@ -1,0 +1,199 @@
+﻿
+@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model ICollection<HostApplicationViewModel>
+
+@{
+    ViewBag.Title = "Property Applications";
+    Layout = "_HostLayout";
+}
+
+<link rel="stylesheet" href="~/css/images.css" />
+<link rel="stylesheet" href="~/css/hostApplication.css" />
+
+<div class="application-page">
+
+    <div class="application-header">
+        <div>
+            <h3>Property Applications</h3>
+            <p>Review and manage pending property applications.</p>
+        </div>
+
+        <span class="application-count">
+            <i class="fa-regular fa-clock"></i>
+            @(Model.Count == 1 ? Model.Count + " result" : Model.Count + " results" )  
+        </span>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+    
+    <div class="status-filters">
+        <a asp-action="HostApplication"
+           asp-route-status="@ApplicationStatus.Pending"
+           class="status-filter @(ViewBag.SelectedStatus == ApplicationStatus.Pending ? "active" : "")">
+            Pending
+        </a>
+
+        <a asp-action="HostApplication"
+           asp-route-status="@ApplicationStatus.Approved"
+           class="status-filter @(ViewBag.SelectedStatus == ApplicationStatus.Approved ? "active" : "")">
+            Approved
+        </a>
+
+        <a asp-action="HostApplication"
+           asp-route-status="@ApplicationStatus.Rejected"
+           class="status-filter @(ViewBag.SelectedStatus == ApplicationStatus.Rejected ? "active" : "")">
+            Rejected
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="application-empty">
+            <i class="fa-regular fa-circle-check"></i>
+            <h4>No @ViewBag.SelectedStatus Applications</h4>
+            <p>All property applications have been reviewed.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var application in Model)
+        {
+            <div class="property-card application-card">
+
+                <div class="application-details">
+
+                    <div class="application-heading">
+                        <div>
+                            <h4>@application.PropertyTitle</h4>
+
+                            <span>
+                                <i class="fa-solid fa-location-dot"></i>
+                                @application.PropertyAddress
+                            </span>
+                        </div>
+
+                        <span class="application-pending">
+                            <i class="fa-regular fa-clock"></i>
+                            @EnumExtension.GetDisplayName(
+                                application.Status)
+                        </span>
+                    </div>
+
+                    <div class="application-info">
+
+                        <div class="application-field">
+                            <i class="fa-regular fa-user"></i>
+
+                            <div>
+                                <small>Applicant</small>
+                                <strong>@application.HostName</strong>
+                            </div>
+                        </div>
+
+                        <div class="application-field">
+                            <i class="fa-regular fa-envelope"></i>
+
+                            <div>
+                                <small>Email Address</small>
+                                <span>@application.HostEmail</span>
+                            </div>
+                        </div>
+
+                        <div class="application-field">
+                            <i class="fa-regular fa-calendar"></i>
+
+                            <div>
+                                <small>Application Date</small>
+                                <strong>
+                                    @application.AppliedAt.ToString("dd MMM yyyy")
+                                </strong>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="property-actions application-actions">
+
+                        <!-- VIEW PROPERTY -->
+                        <a class="property-button view-button"
+                           asp-controller="Property"
+                           asp-action="Details"
+                           asp-route-id="@application.PropertyId">
+
+                            <i class="fa-regular fa-eye"></i>
+                            View Property
+                        </a>
+
+                        <!-- MESSAGE APPLICANT -->
+                        <a class="property-button view-button"
+                           asp-controller="Message"
+                           asp-action="Chat"
+                           asp-route-contactId="@application.HostId">
+
+                            <i class="fa-regular fa-comment-dots"></i>
+                            Message Host
+                        </a>
+
+                        <!-- REJECT -->
+                        <form asp-controller="Host"
+                              asp-action="ProcessHostApplication"
+                              method="post"
+                              onsubmit="return confirm('Reject this property application?');">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="applicationId"
+                                   value="@application.ApplicationId" />
+
+                            <button type="submit"
+                                    name="status"
+                                    value="@ApplicationStatus.Rejected"
+                                    class="property-button reject-application-button">
+
+                                <i class="fa-solid fa-xmark"></i>
+                                Reject
+                            </button>
+                        </form>
+
+                        <!-- APPROVE -->
+                        <form asp-controller="Host"
+                              asp-action="ProcessHostApplication"
+                              method="post"
+                              onsubmit="return confirm('Approve this property application?');">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="applicationId"
+                                   value="@application.ApplicationId" />
+
+                            <button type="submit"
+                                    name="status"
+                                    value="@ApplicationStatus.Approved"
+                                    class="property-button edit-button">
+
+                                <i class="fa-solid fa-check"></i>
+                                Approve
+                            </button>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

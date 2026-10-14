@@ -1,0 +1,119 @@
+﻿
+@model HostDashboardViewModel
+
+@{
+    ViewBag.Title = "Host Dashboard";
+    Layout = "_HostLayout";
+}
+
+<link rel="stylesheet" href="~/css/dashboard.css" />
+
+<div class="dashboard-page">
+
+    <!-- WELCOME -->
+    <div class="dashboard-welcome">
+        <h3>Welcome back, @Model.HostName!</h3>
+
+        <p>Here's what's happening with your properties today.</p>
+
+        <div class="dashboard-quick-actions">
+            <a asp-controller="Property"
+               asp-action="Create"
+               class="dashboard-quick-button">
+                <i class="fa-solid fa-plus"></i>
+                Add New Property
+            </a>
+
+            <a asp-controller="Booking"
+               asp-action="BookingRequest"
+               class="dashboard-quick-button">
+                <i class="fa-regular fa-calendar-check"></i>
+                View Booking Requests
+            </a>
+
+            <a asp-controller="Report"
+               asp-action="Earnings"
+               class="dashboard-quick-button">
+                <i class="fa-solid fa-chart-line"></i>
+                View Earnings Report
+            </a>
+        </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="dashboard-stat-grid">
+
+        <div class="dashboard-stat-card">
+            <div class="dashboard-icon icon-blue">
+                <i class="fa-solid fa-house"></i>
+            </div>
+
+            <strong class="dashboard-stat-value">
+                @Model.TotalProperties
+            </strong>
+
+            <span class="dashboard-stat-label">
+                Total Properties
+            </span>
+
+            <small class="stat-positive">
+                @Model.ActiveProperties active
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <div class="dashboard-icon icon-purple">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+
+            <strong class="dashboard-stat-value">
+                @Model.TotalBookings
+            </strong>
+
+            <span class="dashboard-stat-label">
+                Total Bookings
+            </span>
+
+            <small class="stat-neutral">
+                @Model.MonthlyBookings this month
+                · @Model.PendingBookings pending
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <div class="dashboard-icon icon-green">
+                <i class="fa-solid fa-money-bill-wave"></i>
+            </div>
+
+            <strong class="dashboard-stat-value">
+                R @Model.TotalEarnings.ToString("N2")
+            </strong>
+
+            <span class="dashboard-stat-label">
+                Total Earnings
+            </span>
+
+            <small class="stat-positive">
+                R @Model.MonthlyEarnings.ToString("N2") this month
+            </small>
+        </div>
+
+        <div class="dashboard-stat-card">
+            <div class="dashboard-icon icon-orange">
+                <i class="fa-solid fa-star"></i>
+            </div>
+
+            <strong class="dashboard-stat-value">
+                @Model.AverageRating.ToString("N1")
+            </strong>
+
+            <span class="dashboard-stat-label">
+                Average Rating
+            </span>
+
+            <small class="stat-neutral">
+                @Model.TotalReviews reviews
+            </small>
+        </div>
+    </div>
+</div>

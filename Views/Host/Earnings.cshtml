@@ -1,0 +1,180 @@
+﻿
+@model HostEarningsViewModel
+
+@{
+    ViewBag.Title = "Host Earnings";
+    Layout = "_HostLayout";
+
+    var maxEarnings = Model.MonthlyEarningsHistory
+        .Select(m => m.Amount)
+        .DefaultIfEmpty(0)
+        .Max();
+}
+
+<link rel="stylesheet" href="~/css/hostEarnings.css" />
+
+<div class="earnings-page">
+
+    <!-- HEADER -->
+    <div class="earnings-header">
+        <h3>Earnings Overview</h3>
+        <p>Track completed payments from your properties.</p>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="earnings-summary">
+
+        <div class="earnings-summary-card">
+            <div class="earnings-summary-icon">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+
+            <div>
+                <span>Total Earnings</span>
+                <strong>
+                    R @Model.TotalEarnings.ToString("N2")
+                </strong>
+            </div>
+        </div>
+
+        <div class="earnings-summary-card">
+            <div class="earnings-summary-icon">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+
+            <div>
+                <span>This Month</span>
+                <strong>
+                    R @Model.MonthlyEarnings.ToString("N2")
+                </strong>
+            </div>
+        </div>
+
+        <div class="earnings-summary-card">
+            <div class="earnings-summary-icon">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+
+            <div>
+                <span>Completed Payments</span>
+                <strong>@Model.CompletedPayments</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MONTHLY EARNINGS CHART -->
+    <div class="earnings-section">
+
+        <div class="earnings-section-heading">
+            <div>
+                <h4>Monthly Earnings</h4>
+                <p>Completed payments over the last six months</p>
+            </div>
+        </div>
+
+        <div class="earnings-chart">
+
+            @foreach (var month in Model.MonthlyEarningsHistory)
+            {
+                var height = maxEarnings > 0
+                    ? (double)(month.Amount / maxEarnings) * 100
+                    : 0;
+
+                <div class="earnings-chart-column">
+
+                    <span class="earnings-chart-amount">
+                        R @month.Amount.ToString("N0")
+                    </span>
+
+                    <div class="earnings-chart-track">
+                        <div class="earnings-chart-bar"
+                             style="height: @(height.ToString(
+                                 "0.##",
+                                 System.Globalization.CultureInfo.InvariantCulture))%">
+                        </div>
+                    </div>
+
+                    <span class="earnings-chart-month">
+                        @month.Month
+                    </span>
+
+                    <small>
+                        @month.PaymentCount payments
+                    </small>
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <!-- PAYMENT HISTORY -->
+    <div class="earnings-section">
+
+        <div class="earnings-section-heading">
+            <div>
+                <h4>Payment History</h4>
+                <p>Latest 20 completed payments</p>
+            </div>
+        </div>
+
+        @if (!Model.RecentPayments.Any())
+        {
+            <div class="earnings-empty">
+                <i class="fa-regular fa-credit-card"></i>
+                <h4>No completed payments yet</h4>
+                <p>Your payment history will appear here.</p>
+            </div>
+        }
+        else
+        {
+            <div class="earnings-table-container">
+                <table class="earnings-table">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Guest</th>
+                            <th>Booking</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var payment in Model.RecentPayments)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@payment.PropertyTitle</strong>
+                                </td>
+
+                                <td>@payment.GuestName</td>
+
+                                <td>#@payment.BookingId</td>
+
+                                <td>
+                                    @payment.CreatedAt.ToString("dd MMM yyyy")
+                                </td>
+
+                                <td class="earnings-amount">
+                                    R @payment.Amount.ToString("N2")
+                                </td>
+
+                                <td>
+                                    <span class="earnings-status">
+                                        <i class="fa-solid fa-check"></i>
+                                        Completed
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+    </div>
+
+</div>
