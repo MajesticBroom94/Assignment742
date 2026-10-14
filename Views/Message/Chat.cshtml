@@ -1,0 +1,167 @@
+﻿
+@using System.Globalization
+@model List<MessageViewModel>
+
+@{
+ViewBag.Title = "Conversation";
+Layout = "_Layout";
+
+string receivingParty = ViewBag.ContactId ?? "";
+string contactName = ViewBag.ContactDetails ?? "Conversation";
+string error = TempData["Error"] as string ?? string.Empty;
+
+var southAfricaTimeZone =
+TimeZoneInfo.FindSystemTimeZoneById(
+"South Africa Standard Time");
+}
+
+<link rel="stylesheet" href="~/css/chat.css" />
+
+<div class="chat-page">
+
+    <!-- CONTACT HEADER -->
+    <header class="chat-header">
+
+        <div class="chat-contact-avatar">
+            <i class="fa-solid fa-user"></i>
+        </div>
+
+        <div class="chat-contact-details">
+            <h3>@contactName</h3>
+
+            <p>
+                <i class="fa-regular fa-comment-dots"></i>
+                Your conversation
+            </p>
+        </div>
+
+        <div class="chat-header-icon">
+            <i class="fa-regular fa-comments"></i>
+        </div>
+
+    </header>
+
+    <!-- MESSAGE HISTORY -->
+    <div class="chat-messages" id="messageHistory">
+
+        @if (!Model.Any())
+        {
+        <div class="chat-empty">
+            <div class="chat-empty-icon">
+                <i class="fa-regular fa-comments"></i>
+            </div>
+
+            <h4>No messages yet</h4>
+            <p>Send a message to start the conversation.</p>
+        </div>
+        }
+        else
+        {
+        @foreach (var message in Model)
+        {
+        var isOutbound =
+        message.ReceiverId == receivingParty;
+
+        var localTime =
+        TimeZoneInfo.ConvertTimeFromUtc(
+        DateTime.SpecifyKind(
+        message.Timestamp,
+        DateTimeKind.Utc),
+        southAfricaTimeZone);
+
+        <div class="chat-message-row
+                            @(isOutbound ? "sent" : "received")">
+
+            @if (!isOutbound)
+            {
+            <div class="chat-message-avatar">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            }
+
+            <div class="chat-bubble">
+
+                @if (!isOutbound)
+                {
+                <span class="chat-message-sender">
+                                @message.SenderDetails
+                            </span>
+                }
+
+                <p class="chat-message-content">
+                    @message.Content
+                </p>
+
+                <span class="chat-message-time">
+                            @localTime.ToString(
+                    "dd MMM, HH:mm",
+                    CultureInfo.InvariantCulture)
+                        </span>
+
+            </div>
+
+        </div>
+        }
+        }
+
+    </div>
+
+    <!-- MESSAGE COMPOSER -->
+    <div class="chat-composer">
+
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+        <div class="chat-error" role="alert">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            @error
+        </div>
+        }
+
+        <form asp-controller="Message"
+              asp-action="PostMessage"
+              method="post"
+              class="chat-form">
+
+            @Html.AntiForgeryToken()
+
+            <input type="hidden"
+                   name="receiverId"
+                   value="@receivingParty" />
+
+            <textarea name="content"
+                      id="messageContent"
+                      placeholder="Type your message..."
+                      aria-label="Message"
+                      rows="2"
+                      maxlength="4000"
+                      required></textarea>
+
+            <button type="submit"
+                    class="chat-send-button"
+                    aria-label="Send message">
+
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Send</span>
+
+            </button>
+
+        </form>
+
+        <p class="chat-composer-hint">
+            Keep your messages friendly and respectful.
+        </p>
+
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const history =
+            document.getElementById("messageHistory");
+
+        if (history) {
+            history.scrollTop = history.scrollHeight;
+        }
+    });
+</script>
