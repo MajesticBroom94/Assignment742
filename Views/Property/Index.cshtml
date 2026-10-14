@@ -1,0 +1,204 @@
+﻿@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model ICollection<PropertyOverviewViewModel>
+
+<link rel="stylesheet" href="~/css/images.css" />
+
+@{
+    ViewBag.Title = "My Properties";
+    Layout = "_HostLayout";
+    var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
+}
+
+@if (User.IsInRole("Guest"))
+{
+    <div class="property-add-card">
+
+        <div class="property-add-icon">
+            <i class="fa-solid fa-house"></i>
+        </div>
+
+        <div class="property-add-content">
+            <h4>Add a New Property</h4>
+            <p>Expand your listings by adding another property.</p>
+        </div>
+
+        <a asp-controller="Property"
+           asp-action="Create"
+           class="property-button edit-button property-add-button">
+
+            <i class="fa-solid fa-plus"></i>
+            Add Property
+        </a>
+
+    </div>
+}
+
+@foreach (var property in Model)
+{
+    <div class="property-card">
+        <div class="property-media">
+            <img src="@property.ImageUrl"
+                 class="property-image"
+                 alt="@property.Title" />
+
+            <div class="property-meta">
+                <span>
+                    <i class="fa fa-star"></i>
+                    @property.Reviews Reviews
+                </span>
+
+                <span>
+                    <i class="fa fa-calendar-check"></i>
+                    @property.Bookings Bookings
+                </span>
+            </div>
+        </div>
+
+        <div class="property-details">
+            <div class="property-heading">
+                <div>
+                    <h4>@property.Title</h4>
+                    <span>@property.Address</span>
+                </div>
+
+                <strong>R @(property.PricePerNight) <span style="font-size: 10px">/night</span> </strong>
+            </div>
+
+            <div class="property-info">
+                <span>
+                    <i class="fa fa-users"></i>
+                    @property.MaxGuests Guests
+                </span>
+                
+                <span>
+                    <i class="fa fa-bed"></i>
+                    @property.Bedrooms Bedrooms
+                </span>
+                
+                <span>
+                    <i class="fa fa-bed"></i>
+                    @property.Beds Beds
+                </span>
+                
+                <span>
+                    <i class="fa fa-bath"></i>
+                    @property.Bathrooms Bathrooms
+                </span>
+                
+                <span class="property-type-tag">
+                    @EnumExtension.GetDisplayName(property.Type)
+                </span>
+            </div>
+            
+            <div class="property-actions">
+
+                <a class="property-button view-button"
+                   asp-route-id="@property.Id"
+                   asp-action="Details"
+                   asp-controller="Property">
+                    <i class="fa-regular fa-eye"></i>
+                    View Property
+                </a>
+
+                @if (User.IsInRole("Host"))
+                {
+                    <a class="property-button edit-button"
+                       asp-route-propertyId="@property.Id"
+                       asp-action="Update"
+                       asp-controller="Property">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit
+                    </a>
+                }
+
+                @if (isAdmin && property.Status is PropertyStatus.Active
+                         or PropertyStatus.Inactive
+                         or PropertyStatus.Suspended)
+                {
+                    <form asp-controller="Property"
+                          asp-action="SuspendProperty"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="propertyId"
+                               value="@property.Id" />
+
+                        @if (property.Status == PropertyStatus.Suspended)
+                        {
+                            <button type="submit"
+                                    name="status"
+                                    value="@PropertyStatus.Inactive"
+                                    class="property-button edit-button">
+
+                                <i class="fa-solid fa-check"></i>
+                                Enable
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="submit"
+                                    name="status"
+                                    value="@PropertyStatus.Suspended"
+                                    class="property-button suspend-button"
+                                    onclick="return confirm('Suspend this property?');">
+
+                                <i class="fa-solid fa-ban"></i>
+                                Suspend
+                            </button>
+                        }
+                    </form>
+                }
+
+                @if (User.IsInRole("Host") && property.Status is (PropertyStatus.Active or PropertyStatus.Inactive))
+                {
+                    <div class="property-status-control">
+
+                        <label class="status-label"
+                               for="status-toggle-@property.Id">
+                            @(property.Status == PropertyStatus.Active
+                                ? "Listing active"
+                                : "Listing inactive")
+                        </label>
+
+                        <form asp-controller="Property"
+                              asp-action="EnableDisableProperty"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="PropertyId"
+                                   value="@property.Id" />
+                            
+                            <input type="hidden"
+                                   name="PropertyStatus"
+                                   value="@(property.Status == PropertyStatus.Active
+                                              ? PropertyStatus.Inactive
+                                              : PropertyStatus.Active)" />
+
+                            <label class="switch">
+                                <input type="checkbox"
+                                       id="status-toggle-@property.Id"
+                                       checked="@(property.Status == PropertyStatus.Active)"
+                                       onchange="this.form.submit()" />
+
+                                <span class="slider round"></span>
+                            </label>
+
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <span class="status-badge">
+                        @EnumExtension.GetDisplayName(property.Status)
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+}
+

@@ -1,0 +1,391 @@
+﻿
+@using Assignment742.Domain.Enums
+@using Assignment742.Domain.Models
+@model CreatePropertyViewModel
+
+@{
+    ViewData["Title"] = "Create Property";
+}
+
+<div class="container py-4">
+
+    <h2 class="mb-4">Create Property</h2>
+
+    <form asp-action="Create"
+          method="post"
+          enctype="multipart/form-data">
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="All"
+             class="text-danger mb-3"></div>
+
+        <!-- BASIC INFORMATION -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Basic Information</h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label"></label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description"
+                              class="form-control"
+                              rows="4"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Type" class="form-label">
+                            Property Type
+                        </label>
+                        <select asp-for="Type"
+                                asp-items="Html.GetEnumSelectList<PropertyType>()"
+                                class="form-select">
+                            <option value="">-- Select Type --</option>
+                        </select>
+                        <span asp-validation-for="Type" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="PricePerNight" class="form-label">
+                            Price Per Night
+                        </label>
+                        <input asp-for="PricePerNight"
+                               type="number"
+                               min="0.01"
+                               step="0.01"
+                               class="form-control" />
+                        <span asp-validation-for="PricePerNight" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Address" class="form-label"></label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CAPACITY -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Property Capacity</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+
+                    <div class="col-md-3 col-6 mb-3">
+                        <label asp-for="MaxGuests" class="form-label"></label>
+                        <input asp-for="MaxGuests"
+                               class="form-control"
+                               min="1" max="50" />
+                        <span asp-validation-for="MaxGuests" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3 col-6 mb-3">
+                        <label asp-for="Bedrooms" class="form-label"></label>
+                        <input asp-for="Bedrooms"
+                               class="form-control"
+                               min="1" max="50" />
+                        <span asp-validation-for="Bedrooms" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3 col-6 mb-3">
+                        <label asp-for="Beds" class="form-label"></label>
+                        <input asp-for="Beds"
+                               class="form-control"
+                               min="1" max="50" />
+                        <span asp-validation-for="Beds" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3 col-6 mb-3">
+                        <label asp-for="Bathrooms" class="form-label"></label>
+                        <input asp-for="Bathrooms"
+                               class="form-control"
+                               min="1" max="50" />
+                        <span asp-validation-for="Bathrooms" class="text-danger"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- AMENITIES -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Amenities</h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row">
+                    @foreach (Amenity amenity in ViewBag.AvailableAmenities)
+                    {
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="form-check">
+
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="AmenityIds"
+                                       value="@amenity.Id"
+                                       id="amenity_@amenity.Id"
+                                       checked="@(Model?.AmenityIds?.Contains(amenity.Id))" />
+
+                                <label class="form-check-label"
+                                       for="amenity_@amenity.Id">
+                                    <i class="@amenity.IconClass me-1"></i>
+                                    @amenity.Name
+                                </label>
+
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <span asp-validation-for="AmenityIds"
+                      class="text-danger"></span>
+
+            </div>
+        </div>
+
+        <!-- IMAGES -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Property Images</h5>
+            </div>
+
+            <div class="card-body">
+
+                <label asp-for="Images" class="form-label">
+                    Upload Property Pictures
+                </label>
+
+                <input asp-for="Images"
+                       type="file"
+                       multiple
+                       accept="image/*"
+                       class="form-control" />
+
+                <div class="form-text">
+                    You can select multiple images.
+                </div>
+
+                <span asp-validation-for="Images"
+                      class="text-danger"></span>
+
+            </div>
+        </div>
+
+        <!-- CHECK-IN INSTRUCTIONS -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Check-in Instructions</h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label asp-for="CheckInProcessTitle"
+                           class="form-label">
+                        Instructions Title
+                    </label>
+
+                    <input asp-for="CheckInProcessTitle"
+                           class="form-control" />
+
+                    <span asp-validation-for="CheckInProcessTitle"
+                          class="text-danger"></span>
+                </div>
+
+                <!-- Stores the generated JSON -->
+                <input asp-for="CheckInProcessJson" type="hidden" />
+
+                <span asp-validation-for="CheckInProcessJson"
+                      class="text-danger"></span>
+
+                <p id="stepSummary" class="text-muted mb-2">
+                    No check-in steps added.
+                </p>
+
+                <button type="button"
+                        class="btn btn-outline-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#checkInModal">
+                    Manage Check-in Steps
+                </button>
+
+            </div>
+        </div>
+
+        <!-- SUBMIT -->
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-action="Index"
+               class="btn btn-secondary">
+                Cancel
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Create Property
+            </button>
+        </div>
+
+    </form>
+</div>
+
+
+<!-- CHECK-IN STEPS MODAL -->
+<div class="modal fade"
+     id="checkInModal"
+     tabindex="-1"
+     aria-labelledby="checkInModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="checkInModalLabel">
+                    Manage Check-in Steps
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <p class="text-muted">
+                    Add instructions in the order guests should follow them.
+                </p>
+
+                <div id="checkInSteps"></div>
+
+                <button type="button"
+                        class="btn btn-outline-primary mt-2"
+                        id="addStepBtn">
+                    + Add Step
+                </button>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-primary"
+                        data-bs-dismiss="modal">
+                    Done
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        const stepsContainer = document.getElementById("checkInSteps");
+        const jsonInput = document.getElementById("CheckInProcessJson");
+        const stepSummary = document.getElementById("stepSummary");
+
+        let steps = [];
+
+        // Load existing steps (also works after a validation error).
+        try {
+            const parsed = JSON.parse(jsonInput.value || "[]");
+
+            if (Array.isArray(parsed)) {
+                steps = parsed.filter(step => typeof step === "string");
+            }
+        } catch {
+            steps = [];
+        }
+
+        function saveSteps() {
+            jsonInput.value = JSON.stringify(steps);
+
+            const count = steps.filter(step => step.trim() !== "").length;
+
+            stepSummary.textContent = count === 0
+                ? "No check-in steps added."
+                : count + " check-in step(s) added.";
+        }
+
+        function renderSteps() {
+            stepsContainer.innerHTML = "";
+
+            steps.forEach((step, index) => {
+
+                const row = document.createElement("div");
+                row.className = "mb-3";
+
+                const label = document.createElement("label");
+                label.className = "form-label";
+                label.textContent = "Step " + (index + 1);
+
+                const inputGroup = document.createElement("div");
+                inputGroup.className = "input-group";
+
+                const input = document.createElement("input");
+                input.type = "text";
+                input.className = "form-control";
+                input.placeholder = "Enter check-in instruction";
+                input.value = step;
+
+                input.addEventListener("input", function () {
+                    steps[index] = this.value;
+                    saveSteps();
+                });
+
+                const removeBtn = document.createElement("button");
+                removeBtn.type = "button";
+                removeBtn.className = "btn btn-outline-danger";
+                removeBtn.textContent = "Remove";
+
+                removeBtn.addEventListener("click", function () {
+                    steps.splice(index, 1);
+                    renderSteps();
+                });
+
+                inputGroup.appendChild(input);
+                inputGroup.appendChild(removeBtn);
+
+                row.appendChild(label);
+                row.appendChild(inputGroup);
+
+                stepsContainer.appendChild(row);
+            });
+
+            saveSteps();
+        }
+
+        document.getElementById("addStepBtn")
+            .addEventListener("click", function () {
+                steps.push("");
+                renderSteps();
+            });
+
+        // Remove empty steps before submitting the form.
+        document.querySelector('form[asp-action="Create"]')?.addEventListener(
+            "submit", saveSteps
+        );
+
+        // Initialise the modal fields and hidden JSON input.
+        renderSteps();
+    </script>
+}
