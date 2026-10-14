@@ -1,7 +1,9 @@
-﻿using Assignment742.Data;
+﻿using System.Text.Json;
+using Assignment742.Data;
 using Assignment742.Domain.Enums;
 using Assignment742.Domain.Models;
 using Assignment742.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,20 +14,240 @@ public class BookingController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ILogger<BookingController> _logger;
 
     public BookingController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<BookingController> logger)
     {
         _context = context;
         _userManager = userManager;
-        _logger = logger;
-        
     }
+
+    
+    [HttpGet]
+
+    public async Task<IActionResult> BookingRequest(
+        BookingStatus status = BookingStatus.Pending)
+    {
+        var host = await _userManager.GetUserAsync(User);
+
+        if (host == null)
+            return Challenge();
+
+        if (!Enum.IsDefined(status))
+            return BadRequest("Invalid booking status.");
+
+        var bookings = await _context.Bookings
+            .Where(b =>
+                b.Property.HostId == host.Id &&
+                b.Status == status)
+            .OrderBy(b => b.CheckInDate)
+            .Select(b => new BookingRequestViewModel
+            {
+                GuestId = b.GuestId,
+                BookingId = b.Id,
+                PropertyTitle = b.Property.Title,
+                PropertyAddress = b.Property.Address,
+                CheckInDate = b.CheckInDate,
+                CheckOutDate = b.CheckOutDate,
+
+                GuestDetails =
+                    b.Guest.FirstName + " " + b.Guest.LastName,
+
+                GuestEmail = b.Guest.Email ?? "",
+
+                PaymentStatus = b.Payment != null
+                    ? b.Payment.Status
+                    : PaymentStatus.PayLater
+            })
+            .ToListAsync();
+
+        ViewBag.SelectedStatus = status;
+
+        return View(bookings);
+    }
+
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateRequestStatus(int bookingId, BookingStatus status)
+    {
+        var host = await _userManager.GetUserAsync(User);
+
+        if (host == null)
+            return Challenge();
+
+        if (status != BookingStatus.Approved && status != BookingStatus.Rejected)
+        {
+            return BadRequest();
+        }
+
+        var booking = await _context.Bookings
+            .Where(b =>
+                b.Id == bookingId &&
+                b.Property.HostId == host.Id)
+            .Include(b => b.Payment)
+            .Include(b => b.Property)
+            .ThenInclude(hostProperty => hostProperty.CheckInProcess)
+            .FirstOrDefaultAsync();
+
+        if (booking == null)
+            return NotFound();
+
+        if (booking.Status != BookingStatus.Pending)
+        {
+            TempData["Error"] = "This booking request has already been processed.";
+
+            return RedirectToAction(nameof(BookingRequest));
+        }
+
+        switch (status)
+        {
+            // create GuestCheckin
+            case BookingStatus.Approved:
+            {
+                var guestCheckin = new GuestCheckIn
+                {
+                    BookingId = booking.Id,
+                    Status = CheckInStatus.Pending,
+                    CheckInProcessId = booking.Property.CheckInProcess?.Id
+                };
+
+                booking.GuestCheckIn = guestCheckin;
+                break;
+            }
+            
+            // change payment to be nopt collected
+            case BookingStatus.Rejected when booking.Payment != null:
+                booking.Payment.Status = PaymentStatus.Refunded;
+                break;
+        }
+
+        booking.Status = status;
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = status == BookingStatus.Approved
+            ? "Booking request approved successfully."
+            : "Booking request was rejected.";
+
+        return RedirectToAction(nameof(BookingRequest));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Checkin(int bookingId)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        
+        if (user == null)
+            return Challenge();
+
+        var guestCheckIn = await _context.GuestCheckIns
+            .Where(b => b.Booking.GuestId == user.Id && b.BookingId == bookingId)
+            .FirstOrDefaultAsync();
+
+        if (guestCheckIn == null)
+        {
+            return NotFound();
+        }
+        
+        if (guestCheckIn.Status != CheckInStatus.Pending)
+            return BadRequest();
+
+        guestCheckIn.Status = CheckInStatus.CheckedIn;
+        
+        await _context.SaveChangesAsync();
+        
+        TempData["Success"] = "Success: You have been checked in";
+        return RedirectToAction(nameof(Index));
+
+    }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Checkout(int bookingId)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        
+        if (user == null)
+            return Challenge();
+
+        var guestCheckIn = await _context.GuestCheckIns
+            .Where(b => b.Booking.GuestId == user.Id && b.BookingId == bookingId)
+            .FirstOrDefaultAsync();
+
+        if (guestCheckIn == null)
+        {
+            return NotFound();
+        }
+        
+        if (guestCheckIn.Status != CheckInStatus.CheckedIn)
+            return BadRequest();
+
+        guestCheckIn.Status = CheckInStatus.CheckedOut;
+        
+        await _context.SaveChangesAsync();
+        
+        TempData["Success"] = "Success: You have been checked out.";
+        return RedirectToAction(nameof(Index));
+    }
+    
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ProcessPayment(int bookingId)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        
+        if (user == null)
+            return Challenge();
+        
+        var booking = await  _context.Bookings
+            .Where(b => b.Id == bookingId && b.GuestId == user.Id)
+            .Include(b => b.Payment)
+            .FirstOrDefaultAsync();
+        
+        if (booking == null)
+            return NotFound();
+        
+        if (booking.Status == BookingStatus.Rejected)
+            return BadRequest("This booking was cancelled by host");
+
+        if (booking.Payment == null)
+        {
+            booking.Payment = new Payment
+            {
+                BookingId = booking.Id,
+                Amount = booking.TotalPrice,
+                Status = PaymentStatus.Completed
+            };
+        }
+
+        else if (booking.Payment.Status == PaymentStatus.PayLater)
+        {
+            booking.Payment.Status = PaymentStatus.Completed;
+        }
+        else
+        {
+            return BadRequest();
+        }
+
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = "Payment completed successfully.";
+        
+        return RedirectToAction(nameof(Index));
+    }
+    
     
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateBookingViewModel model)
     {
+        if (User.Identity is { IsAuthenticated: false })
+        {
+            
+        }
+        
         if (!ModelState.IsValid)
         {
             TempData["BookingError"] = "Submission Was Not Successful. Please Try Again";
@@ -84,7 +306,7 @@ public class BookingController : Controller
                 b.PropertyId == model.PropertyId &&
                 b.CheckInDate < model.CheckOutDate &&
                 b.CheckOutDate > model.CheckInDate &&
-                b.Status != BookingStatus.Cancelled);
+                b.Status != BookingStatus.Rejected);
 
         if (hasConflict)
         {
@@ -112,19 +334,37 @@ public class BookingController : Controller
 
         var affectedRows = await _context.SaveChangesAsync();
 
-        if (affectedRows > 0)
+        if (affectedRows < 1)
         {
-            var payment = new Payment
-            {
-                BookingId = booking.Id,
-                Amount = booking.TotalPrice,
-                Status = model.PaymentOption
-            };
-
-            _context.Payments.Add(payment);
-            
-            await _context.SaveChangesAsync();
+            TempData["BookingError"] = "Submission Was Not Successful. Please Try Again";
+            return RedirectToAction("Details", "Property", new { id = model.PropertyId });
         }
+        
+        var payment = new Payment
+        {
+            BookingId = booking.Id,
+            Amount = booking.TotalPrice,
+            Status = model.PaymentOption
+        };
+
+        _context.Payments.Add(payment);
+            
+        await _context.SaveChangesAsync();
+
+        // create the notification for property owner
+        string message = $"New reservation received for: {property.Title}\n" +
+                         $"You can approve this request under 'Bookings Request'";
+        
+        var notification = new Notification
+        {
+            UserId = property.HostId,
+            Title = message,
+            Status = NotificationStatus.Unread,
+            Type = NotificationType.BookingRequest
+        };
+        
+        _context.Notifications.Add(notification);
+        await _context.SaveChangesAsync();
         
         TempData["BookingConfirmation"] = "Your Reservation Has Been Submitted";
         return RedirectToAction("Details", "Property", new { id = model.PropertyId });
@@ -173,7 +413,7 @@ public class BookingController : Controller
                 b.PropertyId == propertyId &&
                 b.CheckInDate < checkOutDate &&
                 b.CheckOutDate > checkInDate &&
-                b.Status != BookingStatus.Cancelled);
+                b.Status != BookingStatus.Rejected);
 
         if (hasConflict)
         {
@@ -191,4 +431,82 @@ public class BookingController : Controller
         });
     }
 
+    [Authorize(Roles = "Admin, SuperAdmin, Guest")]
+    [HttpGet]
+    public async Task<IActionResult> Index(int? filterId = null)
+    {
+        
+        var currentUser = await _userManager.GetUserAsync(User);
+        
+        if  (currentUser == null)
+            return Unauthorized(); 
+        
+        var isAdmin = User.IsInRole("Admin") ||  User.IsInRole("SuperAdmin");
+
+        var query = _context.Bookings.AsQueryable();
+
+        if (!isAdmin)
+            query = query.Where(b => b.GuestId == currentUser.Id);
+
+        if (filterId != null)
+        {
+            query = query.Where(b => b.Id == filterId.Value);
+        }
+      
+        var booking = await query.Select(b => new BookingViewModel
+        {
+            BookingId = b.Id,
+            HostId = b.Property.HostId,
+            PropertyTitle =  b.Property.Title,
+            PropertyAddress =  b.Property.Address,
+            CheckInDate = b.CheckInDate,
+            CheckOutDate = b.CheckOutDate,
+            HostDetails = b.Property.Host.FirstName + " " + b.Property.Host.LastName,
+            HostEmail =  b.Property.Host.Email!,
+            BookingStatus = b.Status,
+            PaymentStatus = b.Payment == null ? PaymentStatus.PayLater : b.Payment.Status,
+            CheckInProcessId = b.GuestCheckIn == null ? null : b.GuestCheckIn.CheckInProcessId,
+            CheckInStatus = b.GuestCheckIn == null ? null : b.GuestCheckIn.Status,
+        })
+        .ToListAsync();
+        
+        return View(booking);
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> BookingCheckinSteps(int bookingId)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
+
+        var bookingExists = await _context.Bookings
+            .AnyAsync(b => b.Id == bookingId &&
+                                  b.GuestId == user.Id &&
+                                  b.Status == BookingStatus.Approved);
+
+        if (!bookingExists)
+            return NotFound();
+
+        var process = await _context.GuestCheckIns
+            .Where(c => c.BookingId == bookingId)
+            .Select(c => new
+            {
+                c.CheckInProcess!.Title,
+                c.CheckInProcess.StepsJson
+            })
+            .FirstOrDefaultAsync();
+
+        if (process == null)
+            return NotFound("No check-in instructions available.");
+
+        var steps = JsonSerializer.Deserialize<List<string>>(process.StepsJson) ?? new List<string>();
+
+        return Json(new
+        {
+            title = process.Title,
+            steps
+        });
+    }
 }
