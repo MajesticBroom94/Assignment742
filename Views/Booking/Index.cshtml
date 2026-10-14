@@ -1,0 +1,445 @@
+﻿
+@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model ICollection<BookingViewModel>
+
+@{
+    ViewBag.Title = "My Bookings";
+    Layout = "_HomeLayout"; // Change to your actual guest layout
+
+    var today = DateTime.Today;
+}
+
+@Html.AntiForgeryToken();
+
+<link rel="stylesheet" href="~/css/bookingRequest.css" />
+<link rel="stylesheet" href="~/css/booking.css" />
+
+<div class="booking-page">
+
+    <div class="booking-page-header">
+        <div>
+            <h3>My Bookings</h3>
+            <p>Manage your reservations, payments and check-ins.</p>
+        </div>
+
+        <span class="booking-count">
+            <i class="fa-regular fa-calendar"></i>
+            @Model.Count Bookings
+        </span>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="booking-alert success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="booking-alert error">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="booking-empty">
+            <i class="fa-regular fa-calendar-xmark"></i>
+            <h4>No Bookings Found</h4>
+            <p>You haven't made any reservations yet.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var booking in Model)
+        {
+            var isApproved = booking.BookingStatus == BookingStatus.Approved;
+
+            var isPaid = booking.PaymentStatus == PaymentStatus.Completed;
+
+            var canPay = booking.PaymentStatus == PaymentStatus.PayLater;
+
+            var hasPendingCheckinStatus = booking.CheckInStatus == CheckInStatus.Pending;
+
+            var isCheckedIn = booking.CheckInStatus == CheckInStatus.CheckedIn;
+
+            var isCheckedOut = booking.CheckInStatus == CheckInStatus.CheckedOut;
+
+            var inDateRange = today >= booking.CheckInDate.Date &&
+                              today <= booking.CheckOutDate.Date;
+
+            var canCheckIn = hasPendingCheckinStatus &&
+                             isPaid &&
+                             inDateRange;
+
+            var canCheckOut = isApproved &&
+                              isPaid &&
+                              inDateRange &&
+                              isCheckedIn;
+
+            <div class="booking-card">
+
+                <div class="booking-card-header">
+                    <div>
+                        <h4>@booking.PropertyTitle</h4>
+
+                        <span class="booking-address">
+                            <i class="fa-solid fa-location-dot"></i>
+                            @booking.PropertyAddress
+                        </span>
+                    </div>
+
+                    <span class="guest-booking-status">
+                        @EnumExtension.GetDisplayName(
+                            booking.BookingStatus)
+                    </span>
+                </div>
+
+                <div class="booking-card-body">
+
+                    <!-- HOST DETAILS -->
+                    <div class="booking-section">
+
+                        <span class="booking-section-title">
+                            Host Information
+                        </span>
+
+                        <div class="booking-detail">
+                            <i class="fa-regular fa-user"></i>
+                            <div>
+                                <small>Property Host</small>
+                                <strong>@booking.HostDetails</strong>
+                            </div>
+                        </div>
+
+                        <div class="booking-detail">
+                            <i class="fa-regular fa-envelope"></i>
+                            <div>
+                                <small>Email Address</small>
+                                <span>@booking.HostEmail</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RESERVATION DETAILS -->
+                    <div class="booking-section">
+
+                        <span class="booking-section-title">
+                            Reservation Details
+                        </span>
+
+                        <div class="booking-dates">
+
+                            <div class="booking-detail">
+                                <i class="fa-solid fa-calendar-check"></i>
+                                <div>
+                                    <small>Check-in</small>
+                                    <strong>
+                                        @booking.CheckInDate.ToString("dd MMM yyyy")
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="booking-detail">
+                                <i class="fa-solid fa-calendar-xmark"></i>
+                                <div>
+                                    <small>Check-out</small>
+                                    <strong>
+                                        @booking.CheckOutDate.ToString("dd MMM yyyy")
+                                    </strong>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="booking-payment">
+                            <span>Payment Status</span>
+
+                            <span class="payment-badge">
+                                @EnumExtension.GetDisplayName(
+                                    booking.PaymentStatus)
+                            </span>
+                        </div>
+
+                        <div class="booking-payment">
+                            <span>Check-in Status</span>
+
+                            <span class="payment-badge">
+                                @(booking.CheckInStatus.HasValue
+                                    ? EnumExtension.GetDisplayName(
+                                        booking.CheckInStatus.Value)
+                                    : "Not Started")
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="booking-card-footer guest-booking-footer">
+                    
+                    <div class="booking-actions guest-booking-actions">
+
+                        <!-- MESSAGE HOST -->
+                        <a class="booking-button message-button"
+                           asp-controller="Message"
+                           asp-action="Chat"
+                           asp-route-contactId="@booking.HostId">
+                            <i class="fa-regular fa-comment-dots"></i>
+                            Message Host
+                        </a>
+
+                        <!-- PAYMENT -->
+                        @if (canPay)
+                        {
+                            <form asp-controller="Booking"
+                                  asp-action="ProcessPayment"
+                                  method="post"
+                                  onsubmit="return confirm('Confirm payment for this booking?');">
+
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden"
+                                       name="bookingId"
+                                       value="@booking.BookingId" />
+
+                                <button type="submit"
+                                        class="booking-button pay-button">
+                                    <i class="fa-regular fa-credit-card"></i>
+                                    Pay Now
+                                </button>
+                            </form>
+                        }
+
+                        <!-- VIEW CHECK-IN PROCESS -->
+                        @if (isApproved)
+                        {
+                            <button type="button"
+                                    class="booking-button process-button"
+                                    onclick="showCheckinSteps(@booking.BookingId)">
+                                <i class="fa-solid fa-list-check"></i>
+                                View Check-in Process
+                            </button>
+                        }
+
+
+                        <!-- LEAVE REVIEW -->
+                        @if (isCheckedOut)
+                        {
+                            <button type="button"
+                                    class="booking-button review-button"
+                                    onclick="writeReview(@booking.BookingId)">
+                                <i class="fa-regular fa-star"></i>
+                                Leave Review
+                            </button>
+                        }
+
+                        <!-- CHECK-IN -->
+                        @if (canCheckIn)
+                        {
+                            <form asp-controller="Booking"
+                                  asp-action="CheckIn"
+                                  method="post">
+
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden"
+                                       name="bookingId"
+                                       value="@booking.BookingId"/>
+
+                                <button type="submit"
+                                        class="booking-button checkin-button">
+                                    <i class="fa-solid fa-door-open"></i>
+                                    Check In
+                                </button>
+                            </form>
+                        }
+
+                        <!-- CHECK-OUT -->
+                        @if (canCheckOut)
+                        {
+                            <form asp-controller="Booking"
+                                  asp-action="CheckOut"
+                                  method="post"
+                                  onsubmit="return confirm('Confirm your checkout?');">
+
+                                @Html.AntiForgeryToken()
+
+                                <input type="hidden"
+                                       name="bookingId"
+                                       value="@booking.BookingId"/>
+
+                                <button type="submit"
+                                        class="booking-button checkout-button">
+                                    <i class="fa-solid fa-right-from-bracket"></i>
+                                    Check Out
+                                </button>
+                            </form>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<div id="bookingPopup" class="booking-popup-overlay" hidden>
+    <div class="booking-popup" role="dialog"
+         aria-modal="true"
+         aria-labelledby="popupTitle">
+
+        <div class="booking-popup-header">
+            <h4 id="popupTitle"></h4>
+
+            <button type="button"
+                    class="popup-close"
+                    onclick="closeBookingPopup()"
+                    aria-label="Close">
+                &times;
+            </button>
+        </div>
+
+        <div id="popupContent"></div>
+    </div>
+</div>
+
+
+<script>
+
+    const popup = document.getElementById("bookingPopup");
+    const popupTitle = document.getElementById("popupTitle");
+    const popupContent = document.getElementById("popupContent");
+
+    function openBookingPopup(title) {
+        popupTitle.textContent = title;
+        popupContent.replaceChildren();
+        popup.hidden = false;
+    }
+
+    function closeBookingPopup() {
+        popup.hidden = true;
+        popupContent.replaceChildren();
+    }
+
+    // Fetch and display check-in instructions
+    async function showCheckinSteps(bookingId) {
+        openBookingPopup("Check-in Instructions");
+        popupContent.textContent = "Loading...";
+
+        try {
+            const response = await fetch(
+                `/Booking/BookingCheckinSteps?bookingId=${bookingId}`
+            );
+
+            if (!response.ok)
+                throw new Error("Unable to load instructions.");
+
+            const data = await response.json();
+
+            popupTitle.textContent = data.title;
+            popupContent.replaceChildren();
+
+            const list = document.createElement("ol");
+            list.className = "popup-steps";
+
+            for (const step of data.steps) {
+                const item = document.createElement("li");
+                item.textContent = step;
+                list.appendChild(item);
+            }
+
+            popupContent.appendChild(list);
+        }
+        catch (error) {
+            popupContent.textContent = error.message;
+        }
+    }
+
+    // Open review form
+    function writeReview(bookingId) {
+        openBookingPopup("Leave a Review");
+
+        const form = document.createElement("form");
+        form.className = "popup-review-form";
+
+        form.innerHTML = `
+        <label for="reviewRating">Rating</label>
+        <select id="reviewRating" name="rating" required>
+            <option value="">Select rating</option>
+            <option value="5">5 - Excellent</option>
+            <option value="4">4 - Good</option>
+            <option value="3">3 - Average</option>
+            <option value="2">2 - Poor</option>
+            <option value="1">1 - Very Poor</option>
+        </select>
+
+        <label for="reviewComment">Your Review</label>
+        <textarea id="reviewComment"
+                  name="comment"
+                  rows="5"
+                  maxlength="2000"
+                  placeholder="Write your review..."
+                  required></textarea>
+
+        <button type="submit"
+                class="booking-button approve-button">
+            Submit Review
+        </button>
+    `;
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const button = form.querySelector("button");
+            button.disabled = true;
+
+            const token = document.querySelector(
+                'input[name="__RequestVerificationToken"]'
+            )?.value;
+
+            const formData = new FormData(form);
+            formData.append("bookingId", bookingId);
+
+            try {
+                const response = await fetch("/Review/SubmitReview", {
+                    method: "POST",
+                    headers: {
+                        "RequestVerificationToken": token
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || "Review submission failed.");
+                }
+
+                closeBookingPopup();
+                location.reload();
+            }
+            catch (error) {
+                alert(error.message);
+                button.disabled = false;
+            }
+        });
+
+        popupContent.appendChild(form);
+    }
+
+    // Close when clicking outside the dialog
+    popup.addEventListener("click", function (event) {
+        if (event.target === popup)
+            closeBookingPopup();
+    });
+
+    // Close with Escape
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !popup.hidden)
+            closeBookingPopup();
+    });
+</script>

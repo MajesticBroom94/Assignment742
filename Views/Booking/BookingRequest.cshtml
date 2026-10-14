@@ -1,0 +1,212 @@
+﻿@using Assignment742.Domain.Enums
+@using Assignment742.Extensions
+@model List<BookingRequestViewModel>
+
+@{
+    ViewBag.Title = "Booking Requests";
+    Layout = "_HostLayout";
+}
+
+<link rel="stylesheet" href="~/css/bookingRequest.css" />
+
+<div class="booking-page">
+
+    <div class="booking-page-header">
+        <div>
+            <h3>Booking Requests</h3>
+            <p>Review and manage guest reservations.</p>
+        </div>
+
+        <span class="booking-count">
+            <i class="fa-regular fa-clock"></i>
+            @(Model.Count == 1 ? Model.Count + " result" : Model.Count + " results")  
+        </span>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="booking-alert success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="booking-alert error">
+            @TempData["Error"]
+        </div>
+    }
+    
+    <div class="status-filters">
+        <a asp-action="BookingRequest"
+           asp-route-status="@BookingStatus.Pending"
+           class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Pending ? "active" : "")">
+            Pending
+        </a>
+
+        <a asp-action="BookingRequest"
+           asp-route-status="@BookingStatus.Approved"
+           class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Approved ? "active" : "")">
+            Approved
+        </a>
+
+        <a asp-action="BookingRequest"
+           asp-route-status="@BookingStatus.Rejected"
+           class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Rejected ? "active" : "")">
+            Rejected
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="booking-empty">
+            <i class="fa-regular fa-calendar-check"></i>
+            <h4>No @ViewBag.SelectedStatus Booking Requests</h4>
+            <p>You have no booking requests awaiting approval.</p>
+        </div>
+    }
+    
+    else
+    {
+        @foreach (var booking in Model)
+        {
+            <div class="booking-card">
+
+                <div class="booking-card-header">
+                    <div>
+                        <h4>@booking.PropertyTitle</h4>
+                        <span class="booking-address">
+                            <i class="fa-solid fa-location-dot"></i>
+                            @booking.PropertyAddress
+                        </span>
+                    </div>
+
+                    <span class="booking-pending">
+                        <i class="fa-regular fa-clock"></i>
+                        Pending
+                    </span>
+                </div>
+
+                <div class="booking-card-body">
+
+                    <div class="booking-section">
+                        <span class="booking-section-title">
+                            Guest Information
+                        </span>
+
+                        <div class="booking-detail">
+                            <i class="fa-regular fa-user"></i>
+                            <div>
+                                <small>Guest Name</small>
+                                <strong>@booking.GuestDetails</strong>
+                            </div>
+                        </div>
+
+                        <div class="booking-detail">
+                            <i class="fa-regular fa-envelope"></i>
+                            <div>
+                                <small>Email Address</small>
+                                <span>@booking.GuestEmail</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="booking-section">
+                        <span class="booking-section-title">
+                            Reservation Details
+                        </span>
+
+                        <div class="booking-dates">
+                            <div class="booking-detail">
+                                <i class="fa-solid fa-calendar-check"></i>
+                                <div>
+                                    <small>Check-in</small>
+                                    <strong>
+                                        @booking.CheckInDate.ToString("dd MMM yyyy")
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="booking-detail">
+                                <i class="fa-solid fa-calendar-xmark"></i>
+                                <div>
+                                    <small>Check-out</small>
+                                    <strong>
+                                        @booking.CheckOutDate.ToString("dd MMM yyyy")
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="booking-payment">
+                            <span>Payment Status</span>
+                            <span class="payment-badge">
+                                @EnumExtension.GetDisplayName(booking.PaymentStatus)
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="booking-card-footer">
+                    <div class="booking-actions">
+
+                        <a class="booking-button message-button"
+                           asp-controller="Message"
+                           asp-action="Chat"
+                           asp-route-contactId="@booking.GuestId">
+                            <i class="fa-regular fa-comment-dots"></i>
+                            Message Guest
+                        </a>
+
+                        <form asp-controller="Booking"
+                              asp-action="UpdateRequestStatus"
+                              method="post"
+                              onsubmit="return confirm('Reject this booking request?');">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="bookingId"
+                                   value="@booking.BookingId" />
+
+                            <input type="hidden"
+                                   name="status"
+                                   value="@BookingStatus.Rejected" />
+
+                            <button type="submit"
+                                    class="booking-button reject-button">
+                                <i class="fa-solid fa-xmark"></i>
+                                Reject
+                            </button>
+                        </form>
+
+                        <form asp-controller="Booking"
+                              asp-action="UpdateRequestStatus"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="bookingId"
+                                   value="@booking.BookingId" />
+
+                            <input type="hidden"
+                                   name="status"
+                                   value="@BookingStatus.Approved" />
+
+                            <button type="submit"
+                                    class="booking-button approve-button">
+                                <i class="fa-solid fa-check"></i>
+                                Approve
+                            </button>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+        }
+    }
+
+</div>
