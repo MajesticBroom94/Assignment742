@@ -21,6 +21,8 @@ public class Booking
     public Decimal TotalPrice {get; set;}
     
     public BookingStatus Status {get; set;}
+    
+    public DateTime CreatedOn {get; set;} = DateTime.UtcNow;
 
     public GuestCheckIn? GuestCheckIn {get; set;}
     public HostProperty Property { get; set; } = null!;
