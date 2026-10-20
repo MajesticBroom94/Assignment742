@@ -31,7 +31,7 @@
         <!-- LOCATION -->
         <div class="search-bar-item">
             <label for="location"> Where </label>
-            <input id="location" name="Location" type="text" placeholder="All location" 
+            <input id="location" name="Address" type="text" placeholder="All locations" 
                    value="@(searchData != null? searchData.Address : "")"
             >
         </div>
@@ -95,10 +95,8 @@
     
     <div class="navbar-actions">
         
-        <a asp-action="Create" asp-controller="Property" class="navbar-icon long">
-            Become a host
-        </a>
-
+        <a asp-action="Create" asp-controller="Property" class="navbar-icon long">Become a host</a>
+        
         @if (User.Identity is { IsAuthenticated: true })
         {
             <!-- Notifications -->
@@ -134,7 +132,11 @@
                 @if (User.Identity is { IsAuthenticated: true })
                 {
                     <div class="profile-menu-item"> <a asp-controller="Booking" asp-action="Index">Bookings</a> </div>
-                    <div class="profile-menu-item"> <a asp-controller="Account" asp-action="Logout">Log Out</a> </div>
+                    <div class="profile-menu-item">
+                        <form asp-action="Logout" asp-controller="Account" method="post">
+                            <button type="submit">Logout</button>
+                        </form>
+                    </div>
                 }
                 else
                 {
@@ -154,7 +156,6 @@
 
 <script src="~/js/HeaderSearchbar.js"></script>
 <script src="~/js/HeaderMenuDropdown.js"></script>
-<script src="~/js/HomeWishlistScript.js"></script>
 <script src="~/js/notificationPolling.js"></script>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
