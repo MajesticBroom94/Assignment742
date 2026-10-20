@@ -28,13 +28,22 @@ public class PropertyController : Controller
         _logger = logger;
     }
 
+    [HttpGet]
+    [Authorize(Roles = "Admin, SuperAdmin, Host")]
     public async Task<IActionResult> Index()
     {
-       var p = await _context.HostProperties.
-                               Where(p => p.HostId == _userManager.GetUserId(User))
-                               .Select(p => new PropertyOverviewViewModel
+        var query = _context.HostProperties.AsQueryable();
+
+        if (User.IsInRole("Host"))
+        {
+            query = query.Where(p => p.HostId == _userManager.GetUserId(User));
+        }
+        
+        var property = await query
+           .Select(p => new HostPropertyViewModel
                                {
                                    Id = p.Id,
+                                   HostId = p.HostId,
                                    Title = p.Title,
                                    Description = p.Description,
                                    PricePerNight = p.PricePerNight,
@@ -49,9 +58,12 @@ public class PropertyController : Controller
                                    Reviews = p.Reviews.Count,
                                    ImageUrl = p.PropertyImages.Select(pi => pi.ImageUrl).FirstOrDefault() ?? ""
                                }).ToListAsync();
-       return View(p);
+        
+       return View(property);
     }
 
+    
+    [HttpGet]
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null)
@@ -79,11 +91,21 @@ public class PropertyController : Controller
                 Amenities = p.Amenities.ToList(),
                 HostName = p.Host.FirstName + " " + p.Host.LastName,
                 HostProfilePicture = p.Host.ProfilePictureUrl ?? "",
+           
                 ReviewContent = p.Reviews
-                                .OrderByDescending(r => r.CreatedAt)
-                                .ThenByDescending(r => r.Id)
-                                .Take(10)
-                                .ToList()
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.Id)
+                    .Take(10)
+                    .Select(r => new Review
+                    {
+                        Id = r.Id,
+                        Rating = r.Rating,
+                        Comment = r.Comment,
+                        CreatedAt = r.CreatedAt,
+
+                        Reviewer = r.Reviewer
+                    })
+                    .ToList()
                 
             }).FirstOrDefaultAsync();
        
@@ -131,7 +153,7 @@ public class PropertyController : Controller
         }
 
         var model = await query
-            .Select(p => new PropertyGuestViewModel
+            .Select(p => new HomepageViewModel
             {
                 Id = p.Id,
                 Address = p.Address,
@@ -154,12 +176,30 @@ public class PropertyController : Controller
     }
     
     [HttpGet]
+    [Authorize(Roles = "Guest, Host")]
     public async Task<IActionResult> Create()
     {
+        // check to see if an existing host application exists for the guest user
+        if (User.IsInRole("Guest"))
+        {
+            var guest = await _userManager.GetUserAsync(User);
+            if (guest == null)
+            {
+                return Challenge();
+            }
+            var hasPendingApplication = await _context.HostApplications
+                .AnyAsync(ha => ha.ApplicationUserId == guest.Id &&
+                                ha.Status == ApplicationStatus.Pending);
+            if (hasPendingApplication)
+            {
+                TempData["ApplicationError"] = "You have already applied to become a host";
+                return RedirectToAction("Index", "Home");
+            } 
+        }
+        
         ViewBag.AvailableAmenities = await _context.Amenities.ToListAsync();
         return View();
     }
-    
     
     [Authorize(Roles = "Guest, Host")]
     [HttpPost]
@@ -221,6 +261,16 @@ public class PropertyController : Controller
         {
             property.Amenities.Add(amenity);
         }
+
+        // logging
+        var logActivityPropertyCreate = new ActivityLog
+        {
+            UserId = propertyOwner.Id,
+            Action =  "New Property Created",
+            ActivityType = ActivityType.Create
+        };
+        
+        _context.ActivityLogs.Add(logActivityPropertyCreate);    
         
         // Save property first so it gets an Id
         _context.HostProperties.Add(property);
@@ -285,6 +335,44 @@ public class PropertyController : Controller
 
             property.Status = PropertyStatus.AwaitingApproval;
             _context.HostApplications.Add(hostApplication);
+
+            var inboxApplicant = new Notification
+            {
+                UserId = propertyOwner.Id,
+                Title = $"Host application submitted successfully\n" +
+                        $"Our team will review your submission as soon as possible",
+                Status = NotificationStatus.Unread,
+                Type = NotificationType.HostApplication
+            };
+            
+            _context.Notifications.Add(inboxApplicant);
+            
+            // notify all admins
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var superAdmins = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+            var allAdmins = admins.UnionBy(superAdmins, user => user.Id ).ToList();
+
+            foreach (var admin in allAdmins)
+            {
+                var notify = new Notification
+                {
+                    UserId = admin.Id,
+                    Title = $"New Host Application By {propertyOwner.FirstName} - {propertyOwner.Email}",
+                    Status = NotificationStatus.Unread,
+                    Type = NotificationType.HostApplication
+                };
+                _context.Notifications.Add(notify);
+            }
+            
+            // logging
+            var logHostApplication = new ActivityLog()
+            {
+                UserId = propertyOwner.Id,
+                Action = "New Host Application Created",
+                ActivityType = ActivityType.Create,
+            };
+            _context.ActivityLogs.Add(logHostApplication);
+            TempData["HostApplication"] = "Your host application and property was submitted";
         }
         else
         {
@@ -293,7 +381,8 @@ public class PropertyController : Controller
         
         await _context.SaveChangesAsync();
 
-        return RedirectToAction(nameof(Index));
+        return User.IsInRole("Guest") ? 
+            RedirectToAction("Index", "Home") : RedirectToAction(nameof(Index));
     }
     
     
@@ -342,9 +431,7 @@ public class PropertyController : Controller
     
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update(
-        int propertyId,
-        UpdatePropertyViewModel model)
+    public async Task<IActionResult> Update(int propertyId, UpdatePropertyViewModel model)
     {
         if (propertyId != model.Id)
         {
@@ -540,7 +627,16 @@ public class PropertyController : Controller
         // SAVE DATABASE CHANGES
         try
         {
+            var logActivity = new ActivityLog
+            {
+                UserId = currentUser.Id,
+                Action = $"Property {model.Id} updated",
+                ActivityType = ActivityType.Update
+            };
+            _context.ActivityLogs.Add(logActivity);
+            
             await _context.SaveChangesAsync();
+            
         }
         catch
         {
@@ -577,10 +673,16 @@ public class PropertyController : Controller
     }
     
     [HttpPost]
+    [Authorize(Roles = "Admin, SuperAdmin")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SuspendProperty(int propertyId, PropertyStatus status)
+    public async Task<IActionResult> PropertySuspensionManager(int propertyId, PropertyStatus newStatus)
     {
-        if (status is not (PropertyStatus.Inactive or PropertyStatus.Suspended))
+        
+        var admin = await _userManager.GetUserAsync(HttpContext.User);
+        if (admin == null)
+            return NotFound();
+        
+        if (newStatus is not (PropertyStatus.Inactive or PropertyStatus.Suspended))
             return BadRequest();
 
         var property = await _context.HostProperties
@@ -590,28 +692,50 @@ public class PropertyController : Controller
             return NotFound();
 
         // Admin may suspend Active or Inactive properties.
-        if (status == PropertyStatus.Suspended &&
+        if (newStatus == PropertyStatus.Suspended &&
             property.Status is not (PropertyStatus.Active or PropertyStatus.Inactive))
         {
             return BadRequest("This property cannot be suspended.");
         }
 
         // Admin may only enable previously suspended properties.
-        if (status == PropertyStatus.Inactive && property.Status != PropertyStatus.Suspended)
+        if (newStatus == PropertyStatus.Inactive && property.Status != PropertyStatus.Suspended)
         {
-            return BadRequest("Only suspended properties can be enabled.");
+            return BadRequest("The Current Property status forbids this action");
         }
 
-        property.Status = status;
+        property.Status = newStatus;
+        
+        
+        var notify = new Notification
+        {
+            UserId = property.HostId,
+            Title = $"Property {property.Title} (Id: {property.Id}) status changed to {newStatus}",
+            Type = NotificationType.PropertyStatus,
+            Status = NotificationStatus.Unread,
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = admin.Id,
+            Action = $"Property status changed to {newStatus}",
+            ActivityType = ActivityType.Update
+        };
+        
+        _context.Notifications.Add(notify);
+        _context.ActivityLogs.Add(logActivity);
+        
+        
         await _context.SaveChangesAsync();
 
-        TempData["Success"] = status == PropertyStatus.Suspended
+        TempData["Success"] = newStatus == PropertyStatus.Suspended
             ? "Property suspended successfully."
             : "Property enabled successfully.";
 
         return RedirectToAction(nameof(Index));
     }
     
+    /*
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RejectProperty(int propertyId)
@@ -635,7 +759,7 @@ public class PropertyController : Controller
         TempData["Success"] = "Property suspended successfully.";
 
         return RedirectToAction(nameof(Index));
-    }
+    }*/
     
     
     [HttpPost]
@@ -686,6 +810,16 @@ public class PropertyController : Controller
         if (property.Status != requestedStatus)
         {
             property.Status = requestedStatus;
+            
+            var logActivity = new ActivityLog
+            {
+                UserId = user.Id,
+                Action = "Property status changed to " + requestedStatus,
+                ActivityType = ActivityType.Update
+            };
+        
+            _context.ActivityLogs.Add(logActivity);
+            
             await _context.SaveChangesAsync();
         }
 
@@ -694,6 +828,67 @@ public class PropertyController : Controller
             : "Property disabled successfully.";
 
         return RedirectToAction(nameof(Index));
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> CheckAvailability(
+        int propertyId,
+        DateTime checkInDate,
+        DateTime checkOutDate)
+    {
+        // Basic date validation
+        if (checkOutDate <= checkInDate)
+        {
+            return Json(new
+            {
+                available = false,
+                message = "Check-out date must be after check-in date."
+            });
+        }
+
+        if (checkInDate < DateTime.Today)
+        {
+            return Json(new
+            {
+                available = false,
+                message = "Check-in date cannot be in the past."
+            }); 
+        }
+        
+        var propertyExists = await _context.HostProperties
+            .AnyAsync(p => p.Id == propertyId);
+
+        if (!propertyExists)
+        {
+            return Json(new
+            {
+                available = false,
+                message = "Property could not be found."
+            });
+        }
+
+        // Check for overlapping bookings
+        var hasConflict = await _context.Bookings
+            .AnyAsync(b =>
+                b.PropertyId == propertyId &&
+                b.CheckInDate < checkOutDate &&
+                b.CheckOutDate > checkInDate &&
+                b.Status != BookingStatus.Rejected);
+
+        if (hasConflict)
+        {
+            return Json(new
+            {
+                available = false,
+                message = "The property is not available for the selected date range"
+            });
+        }
+
+        return Json(new
+        {
+            available = true,
+            message = "The property is available to reserve!"
+        });
     }
 
  }
