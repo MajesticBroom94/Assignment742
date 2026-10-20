@@ -68,11 +68,7 @@ public class HostController : Controller
         
         return View(applications);
     }
-
-
     
-    
-   
     [HttpPost]
     [Authorize(Roles = "Admin,SuperAdmin")]
     [ValidateAntiForgeryToken]
@@ -113,6 +109,12 @@ public class HostController : Controller
             TempData["Error"] = "Only Guests can have a host application processed.";
             return RedirectToAction(nameof(HostApplication));
         }
+        
+        var admin = await _userManager.GetUserAsync(User);
+
+        if (admin == null)
+            return NotFound();
+
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -124,32 +126,81 @@ public class HostController : Controller
                 var removeResult = await _userManager.RemoveFromRoleAsync(applicant, "Guest");
 
                 if (!removeResult.Succeeded)
-                    throw new InvalidOperationException(
-                        "Could not remove Guest role.");
+                    throw new InvalidOperationException("Could not remove Guest role.");
 
                 // Assign Host role.
-                var addResult =
-                    await _userManager.AddToRoleAsync(applicant, "Host");
+                var addResult = await _userManager.AddToRoleAsync(applicant, "Host");
 
                 if (!addResult.Succeeded)
-                    throw new InvalidOperationException(
-                        "Could not assign Host role.");
+                    throw new InvalidOperationException("Could not assign Host role.");
 
                 // Invalidate existing authentication sessions.
                 var stampResult = await _userManager.UpdateSecurityStampAsync(applicant);
 
                 if (!stampResult.Succeeded)
-                    throw new InvalidOperationException(
-                        "Could not invalidate user sessions.");
+                    throw new InvalidOperationException("Could not invalidate user sessions.");
 
                 application.Status = ApplicationStatus.Approved;
                 application.Property.Status = PropertyStatus.Active;
+                
+                var notifyApproveHost = new Notification
+                {
+                    UserId = applicant.Id,
+                    Title = "Your Host Application Was Approved",
+                    Type = NotificationType.UserPromotion,
+                    Status = NotificationStatus.Unread,
+                };
+                
+                var notifyApproveProperty = new Notification
+                {
+                    UserId = applicant.Id,
+                    Title = "Your First Property Is Now Live!",
+                    Type = NotificationType.PropertyStatus,
+                    Status = NotificationStatus.Unread,
+                };
+                
+                var logActivityApproveHost = new ActivityLog
+                {
+                    UserId = admin.Id,
+                    Action = $"User {applicant.Email} has been promoted to Host",
+                    ActivityType = ActivityType.Update
+                };
+                
+                var logActivityApproveProperty = new ActivityLog
+                {
+                    UserId = admin.Id,
+                    Action = $"Property {application.Property.Id} approved",
+                    ActivityType = ActivityType.Update
+                };
+                
+                _context.Notifications.Add(notifyApproveHost);
+                _context.Notifications.Add(notifyApproveProperty);
+                _context.ActivityLogs.Add(logActivityApproveHost);
+                _context.ActivityLogs.Add(logActivityApproveProperty);
             }
             else
             {
                 // Rejection leaves the applicant as a Guest.
                 application.Status = ApplicationStatus.Rejected;
                 application.Property.Status = PropertyStatus.Rejected;
+                
+                var notifyReject = new Notification
+                {
+                    UserId = applicant.Id,
+                    Title = "Your Host Application Was Rejected",
+                    Type = NotificationType.HostApplication,
+                    Status = NotificationStatus.Unread,
+                };
+                
+                var logActivityRejectProperty = new ActivityLog
+                {
+                    UserId = admin.Id,
+                    Action = $"Property {application.Property.Id} rejected",
+                    ActivityType = ActivityType.Update
+                };
+                
+                _context.Notifications.Add(notifyReject);
+                _context.ActivityLogs.Add(logActivityRejectProperty);
             }
 
             // Save application and property changes.
@@ -246,6 +297,7 @@ public class HostController : Controller
     
     
     [HttpGet]
+    [Authorize(Roles = "Host")]
     public async Task<IActionResult> Earnings()
     {
         var host = await _userManager.GetUserAsync(User);
