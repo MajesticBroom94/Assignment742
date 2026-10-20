@@ -7,6 +7,9 @@ public enum NotificationType
     [Display(Name = "Booking Requests")]
     BookingRequest,
     
+    [Display(Name = "Bookings")]
+    BookingUpdate,
+    
     [Display(Name = "Review Timeline")]
     Review,
     
@@ -18,6 +21,11 @@ public enum NotificationType
     
     [Display(Name = "Properties")]
     PropertyStatus,
+    
+    [Display(Name = "Booking Details")]
+    GuestDocument,
+    
+    UserPromotion,
     
     CheckIn,
     CheckOut

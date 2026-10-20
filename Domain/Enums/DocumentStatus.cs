@@ -4,4 +4,5 @@ public enum DocumentStatus
 {
     Valid,
     Invalid,
+    Pending
 }

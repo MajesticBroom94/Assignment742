@@ -3,6 +3,5 @@
 public enum ActivityType
 {
     Create,
-    Update,
-    Delete
+    Update
 }
