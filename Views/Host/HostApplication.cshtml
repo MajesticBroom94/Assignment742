@@ -4,24 +4,24 @@
 @model ICollection<HostApplicationViewModel>
 
 @{
-    ViewBag.Title = "Property Applications";
-    Layout = "_HostLayout";
+    ViewBag.Title = "Host Applications";
+    Layout = "_AdminLayout";
 }
 
-<link rel="stylesheet" href="~/css/images.css" />
+<link rel="stylesheet" href="~/css/properties.css" />
 <link rel="stylesheet" href="~/css/hostApplication.css" />
 
 <div class="application-page">
 
     <div class="application-header">
         <div>
-            <h3>Property Applications</h3>
-            <p>Review and manage pending property applications.</p>
+            <h3>Host Applications</h3>
+            <p>Review and manage pending host applications.</p>
         </div>
 
         <span class="application-count">
             <i class="fa-regular fa-clock"></i>
-            @(Model.Count == 1 ? Model.Count + " result" : Model.Count + " results" )  
+            @(Model.Count == 1 ? Model.Count + " request" : Model.Count + " requests" )  
         </span>
     </div>
 
@@ -146,51 +146,49 @@
                             <i class="fa-regular fa-comment-dots"></i>
                             Message Host
                         </a>
+                        
+                        @if (application.Status == ApplicationStatus.Pending)
+                        {
+                            <!-- REJECT -->
+                            <form asp-controller="Host" asp-action="ProcessHostApplication" method="post"
+                                  onsubmit="return confirm('Reject this property application?');">
 
-                        <!-- REJECT -->
-                        <form asp-controller="Host"
-                              asp-action="ProcessHostApplication"
-                              method="post"
-                              onsubmit="return confirm('Reject this property application?');">
+                                @Html.AntiForgeryToken()
 
-                            @Html.AntiForgeryToken()
+                                <input type="hidden"
+                                       name="applicationId"
+                                       value="@application.ApplicationId"/>
 
-                            <input type="hidden"
-                                   name="applicationId"
-                                   value="@application.ApplicationId" />
+                                <button type="submit"
+                                        name="status"
+                                        value="@ApplicationStatus.Rejected"
+                                        class="property-button reject-application-button">
 
-                            <button type="submit"
-                                    name="status"
-                                    value="@ApplicationStatus.Rejected"
-                                    class="property-button reject-application-button">
+                                    <i class="fa-solid fa-xmark"></i>
+                                    Reject
+                                </button>
+                            </form>
 
-                                <i class="fa-solid fa-xmark"></i>
-                                Reject
-                            </button>
-                        </form>
+                            <!-- APPROVE -->
+                            <form asp-controller="Host" asp-action="ProcessHostApplication" method="post"
+                                  onsubmit="return confirm('Approve this property application?');">
 
-                        <!-- APPROVE -->
-                        <form asp-controller="Host"
-                              asp-action="ProcessHostApplication"
-                              method="post"
-                              onsubmit="return confirm('Approve this property application?');">
+                                @Html.AntiForgeryToken()
 
-                            @Html.AntiForgeryToken()
+                                <input type="hidden"
+                                       name="applicationId"
+                                       value="@application.ApplicationId"/>
 
-                            <input type="hidden"
-                                   name="applicationId"
-                                   value="@application.ApplicationId" />
+                                <button type="submit"
+                                        name="status"
+                                        value="@ApplicationStatus.Approved"
+                                        class="property-button edit-button">
 
-                            <button type="submit"
-                                    name="status"
-                                    value="@ApplicationStatus.Approved"
-                                    class="property-button edit-button">
-
-                                <i class="fa-solid fa-check"></i>
-                                Approve
-                            </button>
-                        </form>
-
+                                    <i class="fa-solid fa-check"></i>
+                                    Approve
+                                </button>
+                            </form>
+                        }
                     </div>
                 </div>
             </div>
