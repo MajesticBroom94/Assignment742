@@ -1,0 +1,425 @@
+﻿
+/* =========================================
+   DASHBOARD BASE
+   ========================================= */
+
+.dashboard-page {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 22px;
+    color: #333;
+}
+
+.dashboard-page h3,
+.dashboard-page h4 {
+    color: #333;
+}
+
+
+/* =========================================
+   HOST WELCOME SECTION
+   ========================================= */
+
+.dashboard-welcome {
+    background: white;
+    border: 1px solid #999999;
+    border-radius: 10px;
+    padding: 25px 30px;
+    margin-bottom: 22px;
+}
+
+.dashboard-welcome h3 {
+    margin: 0 0 15px;
+    font-size: 23px;
+    font-weight: 700;
+    color: #BF7243;
+}
+
+.dashboard-welcome p {
+    margin: 0 0 18px;
+    color: #777;
+    font-size: 13px;
+}
+
+.dashboard-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-quick-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 15px;
+
+    background: white;
+    border: 1px solid #aaa;
+    border-radius: 7px;
+
+    color: #BF7243;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+
+    transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.dashboard-quick-button:hover {
+    background: #fcf5f0;
+    border-color: #BF7243;
+    color: #a95d31;
+    transform: translateY(-1px);
+}
+
+
+/* =========================================
+   ADMIN STATISTIC CARDS
+   ========================================= */
+
+.dashboard-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.dashboard-stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    min-width: 0;
+    min-height: 125px;
+    padding: 22px;
+
+    background: white;
+    border: 1px solid #999999;
+    border-radius: 10px;
+
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-stat-value {
+    font-size: 25px;
+    line-height: 1.2;
+    font-weight: 750;
+    color: #292929;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-stat-label {
+    font-size: 12px;
+    color: #888;
+}
+
+.dashboard-stat-card small {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.stat-positive {
+    color: #399d49;
+}
+
+.stat-warning-value {
+    color: #ef8b10;
+}
+
+
+/* =========================================
+   ADMIN SECTION HEADINGS
+   ========================================= */
+
+.dashboard-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+.dashboard-section-heading h4,
+.dashboard-table-section h4 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 650;
+}
+
+
+/* =========================================
+   ADMIN TABLE SECTIONS
+   ========================================= */
+
+.dashboard-table-section {
+    min-width: 0;
+    margin: 25px 0;
+}
+
+.dashboard-table-section > h4 {
+    margin: 0 0 16px;
+}
+
+.dashboard-tables-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.dashboard-view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-right: 10px;
+    color: #BF7243;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dashboard-view-all:hover {
+    color: #a95d31;
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   ADMIN TABLES
+   ========================================= */
+
+.dashboard-table-container {
+    width: 100%;
+    overflow-x: auto;
+
+    background: white;
+    border: 1px solid #999999;
+    border-radius: 10px;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.dashboard-table thead {
+    background: #fafafa;
+}
+
+.dashboard-table th {
+    padding: 15px 16px;
+    text-align: left;
+
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #888;
+    white-space: nowrap;
+}
+
+.dashboard-table td {
+    padding: 14px 16px;
+    border-top: 1px solid #eee;
+
+    vertical-align: middle;
+    color: #555;
+}
+
+.dashboard-table tbody tr:hover {
+    background: #fcfcfc;
+}
+
+.dashboard-table-empty {
+    padding: 35px 15px !important;
+    text-align: center;
+    color: #888;
+}
+
+
+/* =========================================
+   TABLE USER INFORMATION
+   ========================================= */
+
+.dashboard-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 140px;
+}
+
+.dashboard-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+
+    background: #edf0f3;
+    border-radius: 50%;
+
+    color: #777;
+    font-size: 13px;
+}
+
+.dashboard-user-cell > div:last-child,
+.dashboard-person {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dashboard-user-cell strong,
+.dashboard-person strong {
+    color: #444;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dashboard-user-cell small,
+.dashboard-person small {
+    color: #999;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.activity-action {
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================
+   TABLE STATUS AND ACTION BUTTONS
+   ========================================= */
+
+.dashboard-status-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 9px;
+
+    background: #edf7ef;
+    border-radius: 5px;
+
+    color: #399d49;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dashboard-table-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    color: #777;
+    text-decoration: none;
+    font-size: 14px;
+
+    transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease;
+}
+
+.dashboard-table-action:hover {
+    color: #BF7243;
+    background: #fcf5f0;
+    border-color: #f0ded0;
+}
+
+
+/* =========================================
+   TABLET
+   ========================================= */
+
+@media (max-width: 1100px) {
+
+    .dashboard-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-tables-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 650px) {
+
+    .dashboard-page {
+        padding: 15px 10px;
+    }
+
+    /* Host welcome */
+
+    .dashboard-welcome {
+        padding: 20px;
+    }
+
+    .dashboard-welcome h3 {
+        font-size: 19px;
+    }
+
+    .dashboard-quick-actions {
+        flex-direction: column;
+    }
+
+    .dashboard-quick-button {
+        width: 100%;
+    }
+
+    /* Admin statistics */
+
+    .dashboard-stat-grid {
+        gap: 12px;
+    }
+
+    .dashboard-stat-card {
+        min-height: 130px;
+        padding: 15px;
+    }
+
+    .dashboard-stat-value {
+        font-size: 21px;
+    }
+
+    /* Admin tables */
+
+    .dashboard-table th,
+    .dashboard-table td {
+        padding: 12px 10px;
+    }
+}
+
+
+/* =========================================
+   SMALL MOBILE
+   ========================================= */
+
+@media (max-width: 380px) {
+
+    .dashboard-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}

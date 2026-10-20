@@ -1,0 +1,474 @@
+﻿
+/* =========================================
+   USER MANAGEMENT PAGE
+   ========================================= */
+
+.user-management-page {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.user-page-header {
+    margin-bottom: 25px;
+}
+
+.user-page-header h3 {
+    margin: 0 0 5px;
+    color: #333;
+}
+
+.user-page-header p {
+    margin: 0;
+    color: #777;
+    font-size: 14px;
+}
+
+
+/* =========================================
+   ROLE FILTER AND SEARCH BAR
+   ========================================= */
+
+.user-filter {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+
+    margin-bottom: 20px;
+    padding: 18px 20px;
+
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.user-filter-fields {
+    display: flex;
+    align-items: flex-end;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-width: 0;
+}
+
+.user-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.user-filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+}
+
+/* Role dropdown */
+.user-filter-group select {
+    min-width: 180px;
+    height: 40px;
+    padding: 8px 12px;
+
+    border: 1px solid #ddd;
+    border-radius: 7px;
+
+    background: white;
+    color: #444;
+    font-size: 13px;
+}
+
+.user-filter-group select:focus {
+    outline: none;
+    border-color: #BF7243;
+    box-shadow: 0 0 0 2px rgba(191, 114, 67, 0.12);
+}
+
+
+/* =========================================
+   SEARCH INPUT
+   ========================================= */
+
+.user-search-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.user-search-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+
+    transition: border-color 0.2s ease;
+}
+
+.user-search-input:focus-within {
+    border-color: #BF7243;
+    box-shadow: 0 0 0 2px rgba(191, 114, 67, 0.12);
+}
+
+.user-search-input i {
+    color: #888;
+    font-size: 13px;
+}
+
+.user-search-input input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+
+    border: none;
+    outline: none;
+    background: transparent;
+
+    font-family: inherit;
+    font-size: 13px;
+    color: #444;
+}
+
+.user-search-input input::placeholder {
+    color: #aaa;
+}
+
+/* Search button */
+.user-search-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    height: 40px;
+    padding: 0 20px;
+
+    border: 1px solid #BF7243;
+    border-radius: 7px;
+
+    background: #BF7243;
+    color: white;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition: background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.user-search-button:hover {
+    background: #a95d31;
+    border-color: #a95d31;
+}
+
+/* Number of matching users */
+.user-count {
+    padding: 9px;
+    color: #555;
+    font-size: 13px;
+    white-space: nowrap;
+    border: solid 1px #999;
+    border-radius: 7px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* =========================================
+   USER CARDS
+   ========================================= */
+
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+
+    width: 100%;
+    padding: 18px 20px;
+    margin-bottom: 15px;
+
+    border: 1px solid #999;
+    border-radius: 8px;
+    background: white;
+
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.10);
+}
+
+/* Default profile image */
+.user-avatar {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    object-fit: cover;
+
+    background: #f5f5f5;
+}
+
+/* User details */
+.user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-details h4 {
+    margin: 0 0 6px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.user-details span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    color: #777;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.user-details i {
+    color: #888;
+}
+
+/* Role badge */
+.user-role-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    padding: 7px 12px;
+    
+    border: 1px solid color-mix(#BF7243, black 10%);
+    border-radius: 6px;
+
+    color: #555;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   PROMOTE TO ADMIN BUTTON
+   ========================================= */
+
+.user-card form {
+    margin: 0;
+}
+
+.user-promote-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+
+    border: 1px solid #BF7243;
+    border-radius: 9px;
+
+    background: #BF7243;
+    color: white;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.user-promote-button:hover {
+    background: #a95d31;
+    border-color: #a95d31;
+    transform: translateY(-1px);
+}
+
+.user-promote-button:focus-visible {
+    outline: 2px solid #BF7243;
+    outline-offset: 3px;
+}
+
+
+/* =========================================
+   EMPTY STATE
+   ========================================= */
+
+.user-empty {
+    padding: 45px 20px;
+
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+
+    text-align: center;
+    color: #777;
+    font-size: 14px;
+}
+
+
+/* =========================================
+   RESPONSIVE - TABLET
+   ========================================= */
+
+@media (max-width: 900px) {
+
+    .user-filter {
+        align-items: stretch;
+    }
+
+    .user-filter-fields {
+        width: 100%;
+    }
+
+    .user-count {
+        padding-bottom: 0;
+    }
+
+    .user-card {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* Message User Button */
+.user-message-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+
+    border: 1px solid #ddd;
+    border-radius: 9px;
+
+    background: white;
+    color: #444;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: normal;
+    text-decoration: none;
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+}
+
+.user-message-button:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+    color: #333;
+    transform: translateY(-1px);
+}
+
+.user-message-button:focus-visible {
+    outline: 2px solid #888;
+    outline-offset: 3px;
+}
+
+@media (max-width: 650px) {
+    .user-message-button {
+        width: 100%;
+    }
+}
+
+/* =========================================
+   RESPONSIVE - MOBILE
+   ========================================= */
+
+@media (max-width: 650px) {
+
+    .user-management-page {
+        padding: 15px 10px;
+    }
+
+    .user-filter {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+        gap: 15px;
+    }
+
+    .user-filter-fields {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .user-filter-group,
+    .user-search-group {
+        width: 100%;
+    }
+
+    .user-filter-group select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .user-search-button {
+        width: 100%;
+    }
+
+    .user-count {
+        text-align: right;
+    }
+
+    .user-card {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 15px;
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+    }
+
+    .user-details {
+        flex-basis: calc(100% - 75px);
+    }
+
+    .user-details h4 {
+        font-size: 15px;
+    }
+
+    .user-role-badge {
+        margin-left: 0;
+    }
+
+    .user-card form {
+        width: 100%;
+    }
+
+    .user-promote-button {
+        width: 100%;
+    }
+}

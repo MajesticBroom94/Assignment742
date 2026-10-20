@@ -1,0 +1,357 @@
+﻿/* Booking status */
+.guest-booking-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+    color: #555;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Guest booking footer */
+.guest-booking-footer {
+    align-items: center;
+}
+
+.guest-booking-actions {
+    gap: 10px;
+}
+
+/* Payment action */
+.pay-button {
+    background: #BF7243;
+    border-color: #BF7243;
+    color: white;
+}
+
+.pay-button:hover {
+    background: #a95d31;
+    border-color: #a95d31;
+    color: white;
+}
+
+/* Check-in instructions */
+.process-button {
+    background: white;
+    border-color: #ddd;
+    color: #444;
+}
+
+.process-button:hover {
+    background: #f5f5f5;
+    border-color: #bbb;
+    color: #333;
+}
+
+/* Review action */
+.review-button {
+    background: white;
+    border-color: #d6b374;
+    color: #9b6a20;
+}
+
+.review-button:hover {
+    background: #fff7e8;
+    border-color: #c79b4d;
+    color: #815514;
+}
+
+/* Check-in action */
+.checkin-button {
+    background: #BF7243;
+    border-color: #BF7243;
+    color: white;
+}
+
+.checkin-button:hover {
+    background: #a95d31;
+    border-color: #a95d31;
+    color: white;
+}
+
+/* Checkout action */
+.checkout-button {
+    background: #555;
+    border-color: #555;
+    color: white;
+}
+
+.checkout-button:hover {
+    background: #383838;
+    border-color: #383838;
+    color: white;
+}
+
+@media (max-width: 700px) {
+    .guest-booking-footer {
+        align-items: stretch;
+    }
+
+    .guest-booking-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 450px) {
+    .guest-booking-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .guest-booking-actions > a {
+        grid-column: auto;
+    }
+
+    .guest-booking-actions > a,
+    .guest-booking-actions form,
+    .guest-booking-actions button {
+        width: 100%;
+    }
+}
+
+
+/* =========================================
+   BOOKING POPUP
+   ========================================= */
+
+/* Dark background overlay */
+.booking-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Ensure popup is hidden when closed */
+.booking-popup-overlay[hidden] {
+    display: none;
+}
+
+/* Main popup window */
+.booking-popup {
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 9px;
+    padding: 24px;
+
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* Popup header */
+.booking-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.booking-popup-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Close button */
+.popup-close {
+    border: none;
+    background: transparent;
+    font-size: 25px;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+
+    transition: color 0.2s ease;
+}
+
+.popup-close:hover {
+    color: #333;
+}
+
+/* =========================================
+   GUEST DOCUMENT STATUS
+   ========================================= */
+
+.document-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 13px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.document-status.approved {
+    background: #eaf6ed;
+    color: #278344;
+}
+
+.document-status.rejected {
+    background: #fff0f0;
+    color: #bc4040;
+}
+
+.document-status.pending {
+    background: #fff6e6;
+    color: #a87320;
+}
+
+.document-button {
+    background: white;
+    color: #BF7243;
+    border: 1px solid #BF7243;
+}
+
+.document-button:hover {
+    background: #fcf2eb;
+}
+
+.guest-booking-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.booking-document-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: auto;
+}
+
+/* =========================================
+   CHECK-IN INSTRUCTIONS
+   ========================================= */
+
+.guest-booking-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.popup-steps {
+    padding-left: 25px;
+    margin: 0;
+}
+
+.popup-steps li {
+    padding: 8px 0;
+    color: #444;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.popup-steps li::marker {
+    color: #BF7243;
+    font-weight: 600;
+}
+
+/* =========================================
+   REVIEW FORM
+   ========================================= */
+
+.popup-review-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.popup-review-form label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+/* Rating dropdown and comment field */
+.popup-review-form select,
+.popup-review-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    background: white;
+
+    font-family: inherit;
+    font-size: 13px;
+    color: #444;
+
+    transition: border-color 0.2s ease;
+}
+
+.popup-review-form textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Input focus */
+.popup-review-form select:focus,
+.popup-review-form textarea:focus {
+    outline: none;
+    border-color: #BF7243;
+    box-shadow: 0 0 0 2px rgba(191, 114, 67, 0.12);
+}
+
+/* Submit button */
+.popup-review-form button {
+    align-self: flex-end;
+    margin-top: 10px;
+
+    background: #BF7243;
+    border-color: #BF7243;
+    color: white;
+}
+
+.popup-review-form button:hover {
+    background: #a95d31;
+    border-color: #a95d31;
+    color: white;
+}
+
+/* Disabled submit button */
+.popup-review-form button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 600px) {
+    .booking-popup {
+        padding: 20px;
+        max-height: 90vh;
+    }
+
+    .booking-popup-header h4 {
+        font-size: 16px;
+    }
+
+    .popup-review-form button {
+        width: 100%;
+    }
+}

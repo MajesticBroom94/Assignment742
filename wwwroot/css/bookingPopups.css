@@ -1,0 +1,60 @@
+﻿
+.booking-popup-overlay[hidden] { display: none !important; }
+.booking-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(22, 28, 36, .58);
+}
+.booking-popup {
+    width: 100%;
+    max-width: 520px;
+    max-height: min(85vh, 780px);
+    overflow-y: auto;
+    background: white;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 15px 45px rgba(0,0,0,.16);
+}
+.booking-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.booking-popup-header h4 { margin: 0; font-size: 18px; color: #333; }
+.booking-popup-header .popup-close {
+    border: 0;
+    background: transparent;
+    color: #777;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+}
+.popup-review-form { display: grid; gap: 11px; }
+.popup-review-form label { font-size: 13px; font-weight: 600; color: #444; }
+.popup-review-form input[type="text"],
+.popup-review-form input[type="file"],
+.popup-review-form textarea,
+.popup-review-form select {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    font: inherit;
+    font-size: 13px;
+}
+.popup-review-form textarea { resize: vertical; }
+.popup-review-form input:focus,
+.popup-review-form textarea:focus,
+.popup-review-form select:focus { outline: 2px solid rgba(191,114,67,.25); border-color: #BF7243; }
+.popup-review-form .booking-button { justify-self: start; margin-top: 8px; }
+.document-privacy-note { color: #777; font-size: 12px; margin: 0; }
