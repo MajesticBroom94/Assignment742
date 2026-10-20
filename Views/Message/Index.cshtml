@@ -1,15 +1,37 @@
 ﻿@model List<MessageHistoryViewModel>
 
 @{
-    ViewBag.Title = "title";
-    Layout = "_Layout";
+    ViewBag.Title = "Message Center";
+    if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+    {
+        Layout = "_AdminLayout";    
+    }
+    else if (User.IsInRole("Host"))
+    {
+        Layout = "_HostLayout";
+    }
+    else
+    {
+        Layout = "_GuestLayout";
+    }
 }
 
+<link rel="stylesheet" href="~/css/messagesHome.css">
 
-@{ ViewData["Title"] = "Messages"; }
+<div class="msg-contact-page-header">
+    <div>
+        <h3>Message Center</h3>
+        <p>All your messages in one place</p>
+    </div>
 
-<div class="container py-4" style="max-width: 750px;">
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <span class="contact-count">
+        <i class="fa-regular fa-comments"></i>
+        @(Model.Count == 1 ? Model.Count + " chat" : Model.Count + " chats" )  
+    </span>
+</div>
+
+<div class="container" style="max-width: 750px;">
+    <div class="card shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-white border-bottom p-4">
             <h3 class="mb-1">Messages</h3>
             <p class="text-muted mb-0">Your conversations</p>
