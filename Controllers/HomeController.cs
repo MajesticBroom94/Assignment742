@@ -23,13 +23,20 @@ public class HomeController : Controller
         _userManager = userManager;
     }
     
+    
     public async Task<IActionResult> Index()
     {
+        if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+            return RedirectToAction("Dashboard", "Admin");
+        
+        if (User.IsInRole("Host"))
+            return RedirectToAction("Dashboard", "Host");
+        
         var user = await _userManager.GetUserAsync(User);
         
         var model = await _context.HostProperties
             .Where(p => p.Status == PropertyStatus.Active)
-            .Select(p => new PropertyGuestViewModel
+            .Select(p => new HomepageViewModel
                 {
                     Id = p.Id,
                     Address = p.Address,
@@ -45,11 +52,5 @@ public class HomeController : Controller
             ).ToListAsync();
         
         return View(model);
-    }
-    
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }
