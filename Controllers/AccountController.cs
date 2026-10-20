@@ -23,13 +23,9 @@ public class AccountController : Controller
         _context = context;
     }
     
+    // routing
     public IActionResult Index()
     {
-        if (!_signInManager.IsSignedIn(User))
-        {
-            return RedirectToAction("Login");
-        }
-        
         if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
         {
             return RedirectToAction("Dashboard", "Admin");
@@ -133,7 +129,9 @@ public class AccountController : Controller
         return View(model);
     }
     
-    [HttpGet]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost]
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
