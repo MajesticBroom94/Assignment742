@@ -123,17 +123,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         .HasForeignKey(g => g.CheckInProcessId)
         .OnDelete(DeleteBehavior.Restrict);
     
-    // GuestCheckIn -> GuestDocument
+    // GuestCheckIn -> GuestDocuments
     modelBuilder.Entity<GuestDocument>()
         .HasOne(d => d.GuestCheckIn)
-        .WithOne(g => g.GuestDocument)
-        .HasForeignKey<GuestDocument>(d => d.GuestCheckInId)
-        .OnDelete(DeleteBehavior.Cascade);
-    
-    // Ensure one document per check-in
-    modelBuilder.Entity<GuestDocument>()
-        .HasIndex(d => d.GuestCheckInId)
-        .IsUnique();
+        .WithMany(g => g.GuestDocuments)
+        .HasForeignKey(d => d.GuestCheckInId)
+        .OnDelete(DeleteBehavior.Cascade);;
     
     // Booking -> Payment
     modelBuilder.Entity<Payment>()
@@ -206,5 +201,28 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     modelBuilder.Entity<Payment>()
         .Property(p => p.Amount)
         .HasPrecision(18, 2);
-    }
+
+    modelBuilder.Entity<Amenity>().HasData(
+        new Amenity { Id = 1, Name = "Wi-Fi", IconClass = "fa fa-wifi" },
+        new Amenity { Id = 2, Name = "Swimming Pool", IconClass = "fa fa-tint" },
+        new Amenity { Id = 3, Name = "Hot Tub / Jacuzzi", IconClass = "fa fa-bath" },
+        new Amenity { Id = 4, Name = "Air Conditioning", IconClass = "fa fa-snowflake-o" },
+        new Amenity { Id = 5, Name = "Heating", IconClass = "fa fa-thermometer-half" },
+        new Amenity { Id = 6, Name = "Free Parking", IconClass = "fa fa-car" },
+        new Amenity { Id = 7, Name = "Secure Parking", IconClass = "fa fa-lock" },
+        new Amenity { Id = 8, Name = "Fully Equipped Kitchen", IconClass = "fa fa-cutlery" },
+        new Amenity { Id = 9, Name = "Washing Machine", IconClass = "fa fa-refresh" },
+        new Amenity { Id = 10, Name = "Television", IconClass = "fa fa-tv" },
+        new Amenity { Id = 11, Name = "Braai / BBQ Area", IconClass = "fa fa-fire" },
+        new Amenity { Id = 12, Name = "Balcony / Patio", IconClass = "fa fa-home" },
+        new Amenity { Id = 13, Name = "Garden", IconClass = "fa fa-leaf" },
+        new Amenity { Id = 14, Name = "Ocean View", IconClass = "fa fa-eye" },
+        new Amenity { Id = 15, Name = "Mountain View", IconClass = "fa fa-tree" },
+        new Amenity { Id = 16, Name = "Pet Friendly", IconClass = "fa fa-paw" },
+        new Amenity { Id = 17, Name = "Family Friendly", IconClass = "fa fa-users" },
+        new Amenity { Id = 18, Name = "Wheelchair Accessible", IconClass = "fa fa-wheelchair" },
+        new Amenity { Id = 19, Name = "Private Entrance", IconClass = "fa fa-key" },
+        new Amenity { Id = 20, Name = "Backup Power / Inverter", IconClass = "fa fa-bolt" }
+    );
+}
 }
