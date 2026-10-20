@@ -5,12 +5,24 @@
 
 @{
     ViewBag.Title = "Notification Center";
+    
+    var isHost = false;
+    var isAdmin = false;
 
-    var isGuest = User.IsInRole("Guest");
-    var isHost = User.IsInRole("Host");
-    var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
-
-    Layout = isGuest ? "_HomeLayout" : "_HostLayout";
+    if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+    {
+        Layout = "_AdminLayout";
+        isAdmin = true;
+    }
+    else if (User.IsInRole("Host"))
+    {
+        Layout = "_HostLayout";
+        isHost = true;
+    }
+    else
+    {
+        Layout = "_GuestLayout";
+    }
 
     var notifications = Model
         .Where(n => n.Status != NotificationStatus.Dismissed)
@@ -51,8 +63,7 @@
 
             @foreach (var notification in notifications)
             {
-                var isUnread =
-                    notification.Status == NotificationStatus.Unread;
+                var isUnread = notification.Status == NotificationStatus.Unread;
 
                 var iconClass = notification.Type switch
                 {
@@ -76,6 +87,15 @@
 
                     NotificationType.CheckOut =>
                         "fa-solid fa-right-from-bracket",
+                        
+                    NotificationType.BookingUpdate =>
+                        "fa-solid fa-calendar-check",
+
+                    NotificationType.GuestDocument =>
+                        "fa-solid fa-file-circle-check",
+
+                    NotificationType.UserPromotion =>
+                        "fa-solid fa-user-shield",
 
                     _ => "fa-regular fa-bell"
                 };
@@ -97,8 +117,7 @@
 
                     case NotificationType.HostApplication:
                         if (isAdmin)
-                            actionUrl = Url.Action(
-                                "HostApplication", "Host");
+                            actionUrl = Url.Action("HostApplication", "Host");
                         break;
 
                     case NotificationType.PropertyStatus:
@@ -111,6 +130,19 @@
 
                    case NotificationType.Message:
                         actionUrl = Url.Action("Index", "Message");
+                        break;
+                        
+                    case NotificationType.BookingUpdate:
+                        actionUrl = Url.Action("Index", "Booking");
+                        break;
+                        
+                    case NotificationType.GuestDocument:
+                        actionUrl = isHost
+                            ? Url.Action("BookingRequest", "Booking", new {status = BookingStatus.Approved})
+                            : Url.Action("Index", "Booking");
+                        break;
+                        
+                    case NotificationType.UserPromotion:
                         break;
                 }
 
@@ -125,8 +157,7 @@
                         <div class="notification-meta">
                             <span class="notification-date">
                                 <i class="fa-regular fa-clock"></i>
-                                @notification.CreatedAt.ToString(
-                                    "dd MMM yyyy, HH:mm") UTC
+                                @notification.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm") 
                             </span>
 
                             @if (isUnread)
@@ -137,7 +168,7 @@
                             }
                         </div>
 
-                        <p class="notification-title">
+                        <p class="notification-title" style="white-space: pre-line">
                             @notification.Title
                         </p>
 
@@ -154,9 +185,7 @@
 
                             @if (isUnread)
                             {
-                                <form asp-controller="Notification"
-                                      asp-action="AcknowledgeNotification"
-                                      method="post">
+                                <form asp-controller="Notification" asp-action="AcknowledgeNotification" method="post">
 
                                     @Html.AntiForgeryToken()
 
@@ -172,9 +201,7 @@
                                 </form>
                             }
 
-                            <form asp-controller="Notification"
-                                  asp-action="HideNotification"
-                                  method="post">
+                            <form asp-controller="Notification" asp-action="HideNotification" method="post">
 
                                 @Html.AntiForgeryToken()
 
