@@ -1,6 +1,7 @@
 ﻿using Assignment742.Data;
 using Assignment742.Domain.Enums;
 using Assignment742.Domain.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public class NotificationController : Controller
 
     
     [HttpPost]
+    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AcknowledgeNotification(int notificationId)
     {
@@ -46,6 +48,7 @@ public class NotificationController : Controller
     }
 
     [HttpPost]
+    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> HideNotification(
         int notificationId)
@@ -88,6 +91,7 @@ public class NotificationController : Controller
     
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
