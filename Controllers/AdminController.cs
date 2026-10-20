@@ -25,8 +25,9 @@ public class AdminController : Controller
         _userManager = userManager;
         _roleManager = roleManager;
     }
-    [HttpGet]
     
+    [HttpGet]
+    [Authorize(Roles = "Admin, SuperAdmin")]
     public async Task<IActionResult> ManageUsers(string searchButton, string? role, string? search)
     {
         if (searchButton == "clear")
@@ -94,12 +95,19 @@ public class AdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> PromoteToAdmin(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        var adminUser = await _userManager.GetUserAsync(User);
 
-        if (user == null)
+        if (adminUser == null)
+        {
+            return Challenge();
+        }
+        
+        var promotedUser = await _userManager.FindByIdAsync(userId);
+
+        if (promotedUser == null) 
             return NotFound();
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var roles = await _userManager.GetRolesAsync(promotedUser);
 
         if (roles.Count != 1 || roles[0] != "Guest")
         {
@@ -109,7 +117,7 @@ public class AdminController : Controller
         
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        var removeResult = await _userManager.RemoveFromRoleAsync(user, "Guest");
+        var removeResult = await _userManager.RemoveFromRoleAsync(promotedUser, "Guest");
 
         if (!removeResult.Succeeded)
         {
@@ -117,7 +125,7 @@ public class AdminController : Controller
             return RedirectToAction(nameof(ManageUsers));
         }
 
-        var addResult = await _userManager.AddToRoleAsync(user, "Admin");
+        var addResult = await _userManager.AddToRoleAsync(promotedUser, "Admin");
 
         if (!addResult.Succeeded)
         {
@@ -125,13 +133,33 @@ public class AdminController : Controller
             return RedirectToAction(nameof(ManageUsers));
         }
 
-        var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+        var stampResult = await _userManager.UpdateSecurityStampAsync(promotedUser);
 
         if (!stampResult.Succeeded)
         {
             TempData["Error"] = "Failed to update user session.";
             return RedirectToAction(nameof(ManageUsers));
         }
+
+        var notify = new Notification
+        {
+            UserId = promotedUser.Id,
+            Title = "You have been promoted to an admin!",
+            Type = NotificationType.UserPromotion,
+            Status = NotificationStatus.Unread,
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = adminUser.Id,
+            Action = "User role changed to 'Admin'",
+            ActivityType = ActivityType.Update
+        };
+        
+        _context.Notifications.Add(notify);
+        _context.ActivityLogs.Add(logActivity);
+
+        await _context.SaveChangesAsync();
 
         await transaction.CommitAsync();
 
@@ -141,7 +169,7 @@ public class AdminController : Controller
     }    
     
     [HttpGet]
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Roles = "Admin, SuperAdmin")]
     public async Task<IActionResult> Dashboard()
     {
         var hosts = await _userManager.GetUsersInRoleAsync("Host");
@@ -211,5 +239,23 @@ public class AdminController : Controller
         };
         
         return View(model);
+    }
+
+    [Authorize(Roles = "Admin, SuperAdmin")]
+    public async Task<IActionResult> ActivityLog()
+    {
+        var recentActivities = await _context.ActivityLogs
+            .Select(a => new ActivityLogViewModel
+            {
+                UserName = a.User != null ? a.User.FirstName + " " + a.User.LastName : "Unknown User",
+                UserEmail = a.User != null ? a.User.Email ?? "" : "",
+                Action = a.Action,
+                Date = a.CreatedAt,
+                Type = a.ActivityType
+            })
+            .OrderByDescending(o => o.Date)
+            .ToListAsync();
+        
+        return View(recentActivities);
     }
 }
