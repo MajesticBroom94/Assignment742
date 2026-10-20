@@ -4,11 +4,13 @@ using Assignment742.Domain.Models;
 
 namespace Assignment742.Models;
 
-public class PropertyOverviewViewModel
+public class HostPropertyViewModel
 {
     public int Id { get; set; }
     
     public string Title { get; set; } = string.Empty;
+    
+    public string HostId { get; set; } = string.Empty;
     
     public string Description { get; set; } = string.Empty;
     

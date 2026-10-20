@@ -7,6 +7,10 @@ public class BookingRequestViewModel
 {
     public int BookingId {get; set;}
     
+    public BookingStatus BookingStatus {get; set;}
+    
+    public DateTime CreatedOn {get; set;}
+    
     public string GuestId {get; set;} = string.Empty;
     
     public string PropertyTitle { get; set; } = string.Empty;
@@ -23,4 +27,10 @@ public class BookingRequestViewModel
     
     [Display(Name =  "Payment Status")]
     public PaymentStatus PaymentStatus {get; set;}
+    
+    public int? GuestDocumentId { get; set; }
+
+    public string? GuestDocumentType { get; set; }
+
+    public DocumentStatus? GuestDocumentStatus { get; set; }
 }

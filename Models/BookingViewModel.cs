@@ -10,6 +10,12 @@ public class BookingViewModel
     
     public string HostId {get; set;} = string.Empty;
     
+    public DateTime BookingDate {get; set;}
+    
+    public string guestDetails {get; set;} = string.Empty;
+    
+    public string guestEmail {get; set;} = string.Empty;
+    
     public string PropertyTitle { get; set; } = string.Empty;
     
     public string PropertyAddress {get; set;} = string.Empty;
@@ -29,4 +35,10 @@ public class BookingViewModel
     public int? CheckInProcessId {get; set;}
     
     public CheckInStatus? CheckInStatus {get; set;}
+    
+    public bool HasGuestDocument { get; set; }
+    
+    public bool HasValidGuestDocument { get; set; }
+    
+    public DocumentStatus? LatestDocumentStatus { get; set; }
 }
