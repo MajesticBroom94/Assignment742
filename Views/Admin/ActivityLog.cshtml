@@ -1,0 +1,112 @@
+﻿
+@using Assignment742.Extensions
+@model List<ActivityLogViewModel>
+
+@{
+    ViewBag.Title = "Activity Log";
+    Layout = "_AdminLayout";
+}
+
+<link rel="stylesheet" href="~/css/activityLog.css" />
+
+<div class="activity-page">
+
+    <div class="activity-page-header">
+        <div>
+            <h3>Activity Log</h3>
+            <p>Review recorded user activities and system actions.</p>
+        </div>
+
+        <span class="activity-count">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            @Model.Count @(Model.Count == 1 ? "record" : "records")
+        </span>
+    </div>
+
+    <div class="activity-card">
+
+        <div class="activity-card-header">
+            <div>
+                <h4>Activity History</h4>
+                <p>Recorded actions across the platform</p>
+            </div>
+
+            <span class="activity-header-icon">
+                <i class="fa-solid fa-list-check"></i>
+            </span>
+        </div>
+
+        <div class="activity-table-wrapper">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Action Type</th>
+                        <th>Date &amp; Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4">
+                                <div class="activity-empty">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                    <h4>No activity recorded</h4>
+                                    <p>Recorded activities will appear here.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var activity in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="activity-user-cell">
+                                        <div class="activity-avatar">
+                                            <i class="fa-solid fa-user"></i>
+                                        </div>
+
+                                        <div class="activity-user-details">
+                                            <strong>@activity.UserName</strong>
+                                            <small>@activity.UserEmail</small>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="activity-type">
+                                        <i class="fa-solid fa-bolt"></i>
+                                        @activity.Type
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="activity-date">
+                                        <i class="fa-regular fa-calendar"></i>
+                                        <span>
+                                            @activity.Date.ToLocalTime().ToString("dd MMM yyyy")
+                                        </span>
+                                        <small>
+                                            @activity.Date.ToLocalTime().ToString("HH:mm")
+                                        </small>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="activity-action-badge">
+                                        @activity.Action
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
