@@ -32,7 +32,7 @@ dotnet user-secrets set "Host:Password" "<SET_HOST_PASSWORD>"
 
 4. Run the Application
 -------------------------------
-dotnet run
+Run the solution in Visual Studio or JetBrains Rider.
 
 
 SEEDED USER ACCOUNTS

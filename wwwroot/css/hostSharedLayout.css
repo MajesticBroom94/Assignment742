@@ -78,7 +78,6 @@ body {
 }
 
 .navbar-icon:hover {
-    background: #F3F3F3;
     color: var(--host-accent);
 }
 
