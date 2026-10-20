@@ -21,5 +21,5 @@ public class GuestCheckIn
 
     public CheckInProcess? CheckInProcess { get; set; }
     
-    public GuestDocument? GuestDocument { get; set; }
+    public ICollection<GuestDocument> GuestDocuments { get; set; } = new List<GuestDocument>();
 }
