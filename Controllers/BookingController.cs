@@ -141,7 +141,8 @@ public class BookingController : Controller
                 var notifyApprove = new Notification
                 {
                     UserId = booking.GuestId,
-                    Title = $"Booking for the {booking.Property.Title} has been approved",
+                    Title = $"Booking for the {booking.Property.Title} has been approved\n" +
+                            $"Please upload your guest document for verification to finalise this booking.",
                     Type = NotificationType.BookingUpdate,
                     Status = NotificationStatus.Unread,
                 };
