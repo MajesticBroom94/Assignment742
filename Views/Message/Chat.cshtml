@@ -3,16 +3,24 @@
 @model List<MessageViewModel>
 
 @{
-ViewBag.Title = "Conversation";
-Layout = "_Layout";
+    ViewBag.Title = "Conversation";
+    
+    if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+    {
+        Layout = "_AdminLayout";    
+    }
+    else if (User.IsInRole("Host"))
+    {
+        Layout = "_HostLayout";
+    }
+    else
+    {
+        Layout = "_GuestLayout";
+    }
 
-string receivingParty = ViewBag.ContactId ?? "";
-string contactName = ViewBag.ContactDetails ?? "Conversation";
-string error = TempData["Error"] as string ?? string.Empty;
-
-var southAfricaTimeZone =
-TimeZoneInfo.FindSystemTimeZoneById(
-"South Africa Standard Time");
+    string receivingParty = ViewBag.ContactId ?? "";
+    string contactName = ViewBag.ContactDetails ?? "Conversation";
+    string error = TempData["Error"] as string ?? string.Empty;
 }
 
 <link rel="stylesheet" href="~/css/chat.css" />
@@ -27,12 +35,11 @@ TimeZoneInfo.FindSystemTimeZoneById(
         </div>
 
         <div class="chat-contact-details">
-            <h3>@contactName</h3>
-
             <p>
                 <i class="fa-regular fa-comment-dots"></i>
-                Your conversation
+                Your conversation with
             </p>
+            <h3>@contactName</h3>
         </div>
 
         <div class="chat-header-icon">
@@ -59,18 +66,9 @@ TimeZoneInfo.FindSystemTimeZoneById(
         {
         @foreach (var message in Model)
         {
-        var isOutbound =
-        message.ReceiverId == receivingParty;
+        var isOutbound = message.ReceiverId == receivingParty;
 
-        var localTime =
-        TimeZoneInfo.ConvertTimeFromUtc(
-        DateTime.SpecifyKind(
-        message.Timestamp,
-        DateTimeKind.Utc),
-        southAfricaTimeZone);
-
-        <div class="chat-message-row
-                            @(isOutbound ? "sent" : "received")">
+        <div class="chat-message-row @(isOutbound ? "sent" : "received")">
 
             @if (!isOutbound)
             {
@@ -83,20 +81,14 @@ TimeZoneInfo.FindSystemTimeZoneById(
 
                 @if (!isOutbound)
                 {
-                <span class="chat-message-sender">
-                                @message.SenderDetails
-                            </span>
+                <span class="chat-message-sender">@message.SenderDetails</span>
                 }
 
-                <p class="chat-message-content">
-                    @message.Content
-                </p>
+                <p class="chat-message-content">@message.Content</p>
 
                 <span class="chat-message-time">
-                            @localTime.ToString(
-                    "dd MMM, HH:mm",
-                    CultureInfo.InvariantCulture)
-                        </span>
+                    @message.Timestamp.ToLocalTime().ToString("dd MMM HH:mm")
+                </span>
 
             </div>
 
@@ -117,10 +109,7 @@ TimeZoneInfo.FindSystemTimeZoneById(
         </div>
         }
 
-        <form asp-controller="Message"
-              asp-action="PostMessage"
-              method="post"
-              class="chat-form">
+        <form asp-controller="Message" asp-action="PostMessage" method="post" class="chat-form">
 
             @Html.AntiForgeryToken()
 
@@ -157,8 +146,7 @@ TimeZoneInfo.FindSystemTimeZoneById(
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        const history =
-            document.getElementById("messageHistory");
+        const history = document.getElementById("messageHistory");
 
         if (history) {
             history.scrollTop = history.scrollHeight;
