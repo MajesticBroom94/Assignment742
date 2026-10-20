@@ -20,8 +20,8 @@ public static class RoleSeeder
             }
         }
 
-        // Create a default Admin user
-        var adminEmail = "super.admin@staybnb.com";
+        // Create a default Super Admin user
+        const string adminEmail = "super.admin@staybnb.com";
         
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
         
@@ -31,6 +31,7 @@ public static class RoleSeeder
             {
                 UserName = adminEmail,
                 Email = adminEmail, 
+                ProfilePictureUrl = "/Icons/profile.png",
                 EmailConfirmed = true,
                 FirstName = "StayBnb",
                 LastName = "SuperAdmin",
@@ -39,6 +40,29 @@ public static class RoleSeeder
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(newSuperAdmin, "SuperAdmin");
+            }
+        }
+        
+        // Create a Host user 
+        const string hostEmail = "host@staybnb.com";
+        
+        var hostUser = await userManager.FindByEmailAsync(hostEmail);
+        
+        if (hostUser == null)
+        {
+            var newHost = new ApplicationUser
+            {
+                UserName = hostEmail,
+                Email = hostEmail, 
+                ProfilePictureUrl = "/Icons/profile.png",
+                EmailConfirmed = true,
+                FirstName = "StayBnb",
+                LastName = "Host",
+            };
+            var result = await userManager.CreateAsync(newHost, "HostPassword123!");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(newHost, "Host");
             }
         }
     }
