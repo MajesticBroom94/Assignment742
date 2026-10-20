@@ -1,6 +1,6 @@
 ﻿namespace Assignment742.Models;
 
-public class PropertyGuestViewModel
+public class HomepageViewModel
 {
     public int Id { get; set; }
     
