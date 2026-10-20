@@ -3,7 +3,7 @@
 
 @{
     ViewBag.Title = "Manage Users";
-    Layout = "_HostLayout";
+    Layout = "_AdminLayout";
 }
 
 <link rel="stylesheet" href="~/css/manageUsers.css" />
@@ -32,9 +32,7 @@
     }
 
     <!-- ROLE FILTER -->
-    <form asp-action="ManageUsers"
-          method="get"
-          class="user-filter">
+    <form asp-action="ManageUsers" method="get" class="user-filter">
 
         <div class="user-filter-fields">
 
@@ -86,7 +84,7 @@
         </div>
 
         <span class="user-count">
-            @Model.Count Users
+            @(Model.Count == 1 ? Model.Count + " user" : Model.Count + " users")
         </span>
 
     </form>
@@ -116,10 +114,9 @@
                     </span>
                 </div>
                 
-                @if (user.Role == "Guest")
+                @if (user.Role == "Guest" && User.IsInRole("SuperAdmin"))
                 {
-                    <form asp-action="PromoteToAdmin"
-                          method="post"
+                    <form asp-action="PromoteToAdmin" method="post"
                           onsubmit="return confirm('Promote this Guest to Admin?');">
 
                         @Html.AntiForgeryToken()
