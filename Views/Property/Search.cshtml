@@ -1,11 +1,14 @@
-﻿@model List<PropertyGuestViewModel>
+﻿@model List<HomepageViewModel>
 
 @{
     ViewData["Title"] = "staybnb";
-    Layout = "_HomeLayout";
+    Layout = "_GuestLayout";
 }
 
-<link rel="stylesheet" href="~/css/guestLayout.css">
+<link rel="stylesheet" href="~/css/guestFloatingPopup.css">
+<link rel="stylesheet" href="~/css/guestHomePageLayout.css">
+
+@Html.AntiForgeryToken()
 
 <section class="properties-page">
 
@@ -89,6 +92,7 @@
                 <p>There are currently no properties to display. Please check back later.</p>
             </div>
         }
-
     </div>
 </section>
+
+<script src="~/js/GuestFloatingPopups.js"></script>
