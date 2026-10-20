@@ -1,16 +1,36 @@
 ﻿@using Assignment742.Domain.Enums
 @using Assignment742.Extensions
-@model ICollection<PropertyOverviewViewModel>
+@model ICollection<HostPropertyViewModel>
 
-<link rel="stylesheet" href="~/css/images.css" />
+<link rel="stylesheet" href="~/css/properties.css" />
 
 @{
-    ViewBag.Title = "My Properties";
-    Layout = "_HostLayout";
+    if (User.IsInRole("Host"))
+    {
+        Layout = "_HostLayout";
+        ViewBag.Title = "My Properties";
+    }
+    else
+    {
+        Layout = "_AdminLayout";
+        ViewBag.Title = "All Properties";
+    }   
     var isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin");
 }
 
-@if (User.IsInRole("Guest"))
+<div class="property-page-header">
+    <div>
+        <h3>Properties</h3>
+        <p>Add, manage and view properties</p>
+    </div>
+
+    <span class="property-count">
+        <i class="fa-solid fa-house"></i>
+        @(Model.Count == 1 ? Model.Count + " property" : Model.Count + " properties" )  
+    </span>
+</div>
+
+@if (!isAdmin)
 {
     <div class="property-add-card">
 
@@ -100,8 +120,8 @@
                     <i class="fa-regular fa-eye"></i>
                     View Property
                 </a>
-
-                @if (User.IsInRole("Host"))
+                
+                @if (!isAdmin)
                 {
                     <a class="property-button edit-button"
                        asp-route-propertyId="@property.Id"
@@ -111,13 +131,23 @@
                         Edit
                     </a>
                 }
+                else
+                {
+                    <a class="property-button view-button"
+                       asp-route-contactId="@property.HostId"
+                       asp-action="Chat"
+                       asp-controller="Message">
+                        <i class="fa-regular fa-comment-dots"></i>
+                        Message Host
+                    </a>
+                }
 
                 @if (isAdmin && property.Status is PropertyStatus.Active
                          or PropertyStatus.Inactive
                          or PropertyStatus.Suspended)
                 {
                     <form asp-controller="Property"
-                          asp-action="SuspendProperty"
+                          asp-action="PropertySuspensionManager"
                           method="post">
 
                         @Html.AntiForgeryToken()
@@ -129,7 +159,7 @@
                         @if (property.Status == PropertyStatus.Suspended)
                         {
                             <button type="submit"
-                                    name="status"
+                                    name="newStatus"
                                     value="@PropertyStatus.Inactive"
                                     class="property-button edit-button">
 
@@ -140,7 +170,7 @@
                         else
                         {
                             <button type="submit"
-                                    name="status"
+                                    name="newStatus"
                                     value="@PropertyStatus.Suspended"
                                     class="property-button suspend-button"
                                     onclick="return confirm('Suspend this property?');">
