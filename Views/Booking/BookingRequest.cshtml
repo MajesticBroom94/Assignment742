@@ -10,47 +10,38 @@
 <link rel="stylesheet" href="~/css/bookingRequest.css" />
 
 <div class="booking-page">
-
     <div class="booking-page-header">
         <div>
             <h3>Booking Requests</h3>
             <p>Review and manage guest reservations.</p>
         </div>
-
         <span class="booking-count">
             <i class="fa-regular fa-clock"></i>
-            @(Model.Count == 1 ? Model.Count + " result" : Model.Count + " results")  
+            @(Model.Count == 1 ? "1 request" : $"{Model.Count} requests")
         </span>
     </div>
 
     @if (TempData["Success"] != null)
     {
-        <div class="booking-alert success">
-            @TempData["Success"]
-        </div>
+        <div class="booking-alert success">@TempData["Success"]</div>
     }
-
     @if (TempData["Error"] != null)
     {
-        <div class="booking-alert error">
-            @TempData["Error"]
-        </div>
+        <div class="booking-alert error">@TempData["Error"]</div>
     }
-    
+
     <div class="status-filters">
-        <a asp-action="BookingRequest"
+        <a asp-controller="Booking" asp-action="BookingRequest"
            asp-route-status="@BookingStatus.Pending"
            class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Pending ? "active" : "")">
             Pending
         </a>
-
-        <a asp-action="BookingRequest"
+        <a asp-controller="Booking" asp-action="BookingRequest"
            asp-route-status="@BookingStatus.Approved"
            class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Approved ? "active" : "")">
             Approved
         </a>
-
-        <a asp-action="BookingRequest"
+        <a asp-controller="Booking" asp-action="BookingRequest"
            asp-route-status="@BookingStatus.Rejected"
            class="status-filter @(ViewBag.SelectedStatus == BookingStatus.Rejected ? "active" : "")">
             Rejected
@@ -62,16 +53,14 @@
         <div class="booking-empty">
             <i class="fa-regular fa-calendar-check"></i>
             <h4>No @ViewBag.SelectedStatus Booking Requests</h4>
-            <p>You have no booking requests awaiting approval.</p>
+            <p>There are no bookings with the selected status.</p>
         </div>
     }
-    
     else
     {
         @foreach (var booking in Model)
         {
             <div class="booking-card">
-
                 <div class="booking-card-header">
                     <div>
                         <h4>@booking.PropertyTitle</h4>
@@ -80,20 +69,31 @@
                             @booking.PropertyAddress
                         </span>
                     </div>
-
-                    <span class="booking-pending">
-                        <i class="fa-regular fa-clock"></i>
-                        Pending
+                    <span class="booking-status-badge @(booking.BookingStatus switch
+                                                      {
+                                                          BookingStatus.Approved => "approved",
+                                                          BookingStatus.Rejected => "rejected",
+                                                          _ => "pending"
+                                                      })">
+                        @if (booking.BookingStatus == BookingStatus.Approved)
+                        {
+                            <i class="fa-solid fa-check"></i>
+                        }
+                        else if (booking.BookingStatus == BookingStatus.Rejected)
+                        {
+                            <i class="fa-solid fa-xmark"></i>
+                        }
+                        else
+                        {
+                            <i class="fa-regular fa-clock"></i>
+                        }
+                        @EnumExtension.GetDisplayName(booking.BookingStatus)
                     </span>
                 </div>
 
                 <div class="booking-card-body">
-
                     <div class="booking-section">
-                        <span class="booking-section-title">
-                            Guest Information
-                        </span>
-
+                        <span class="booking-section-title">Guest Information</span>
                         <div class="booking-detail">
                             <i class="fa-regular fa-user"></i>
                             <div>
@@ -101,7 +101,6 @@
                                 <strong>@booking.GuestDetails</strong>
                             </div>
                         </div>
-
                         <div class="booking-detail">
                             <i class="fa-regular fa-envelope"></i>
                             <div>
@@ -112,101 +111,129 @@
                     </div>
 
                     <div class="booking-section">
-                        <span class="booking-section-title">
-                            Reservation Details
-                        </span>
-
+                        <span class="booking-section-title">Reservation Details</span>
                         <div class="booking-dates">
                             <div class="booking-detail">
                                 <i class="fa-solid fa-calendar-check"></i>
                                 <div>
                                     <small>Check-in</small>
-                                    <strong>
-                                        @booking.CheckInDate.ToString("dd MMM yyyy")
-                                    </strong>
+                                    <strong>@booking.CheckInDate.ToString("dd MMM yyyy")</strong>
                                 </div>
                             </div>
-
                             <div class="booking-detail">
                                 <i class="fa-solid fa-calendar-xmark"></i>
                                 <div>
                                     <small>Check-out</small>
-                                    <strong>
-                                        @booking.CheckOutDate.ToString("dd MMM yyyy")
-                                    </strong>
+                                    <strong>@booking.CheckOutDate.ToString("dd MMM yyyy")</strong>
                                 </div>
                             </div>
                         </div>
-
                         <div class="booking-payment">
                             <span>Payment Status</span>
-                            <span class="payment-badge">
-                                @EnumExtension.GetDisplayName(booking.PaymentStatus)
-                            </span>
+                            <span class="payment-badge">@EnumExtension.GetDisplayName(booking.PaymentStatus)</span>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="booking-card-footer">
-                    <div class="booking-actions">
+                    @* LEFT: Documents are managed only after booking approval. *@
+                    @if (booking.BookingStatus == BookingStatus.Approved)
+                    {
+                        <div class="document-actions">
+                            @if (booking.GuestDocumentId == null)
+                            {
+                                <span class="document-status pending">
+                                    <i class="fa-regular fa-file"></i>
+                                    No document uploaded
+                                </span>
+                            }
+                            else
+                            {
+                                <div class="document-description">
+                                    <a asp-controller="Booking"
+                                       asp-action="ViewGuestDocument"
+                                       asp-route-documentId="@booking.GuestDocumentId"
+                                       target="_blank" rel="noopener"
+                                       class="booking-button message-button">
+                                        <i class="fa-regular fa-file-lines"></i>
+                                        View Document
+                                    </a>
+                                </div>
 
+                                @if (booking.GuestDocumentStatus == DocumentStatus.Pending)
+                                {
+                                    <form asp-controller="Booking" asp-action="UpdateDocumentStatus" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="documentId" value="@booking.GuestDocumentId" />
+                                        <input type="hidden" name="status" value="@DocumentStatus.Valid" />
+                                        <button type="submit" class="booking-button approve-button">
+                                            <i class="fa-solid fa-check"></i>
+                                            Approve Document
+                                        </button>
+                                    </form>
+                                    <form asp-controller="Booking" asp-action="UpdateDocumentStatus" method="post"
+                                          onsubmit="return confirm('Reject this guest document?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="documentId" value="@booking.GuestDocumentId" />
+                                        <input type="hidden" name="status" value="@DocumentStatus.Invalid" />
+                                        <button type="submit" class="booking-button reject-button">
+                                            <i class="fa-solid fa-xmark"></i>
+                                            Reject Document
+                                        </button>
+                                    </form>
+                                }
+                                else if (booking.GuestDocumentStatus == DocumentStatus.Valid)
+                                {
+                                    <span class="document-status approved">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                        Document Approved
+                                    </span>
+                                }
+                                else if (booking.GuestDocumentStatus == DocumentStatus.Invalid)
+                                {
+                                    <span class="document-status rejected">
+                                        <i class="fa-solid fa-circle-xmark"></i>
+                                        Document Rejected
+                                    </span>
+                                }
+                            }
+                        </div>
+                    }
+
+                    @* RIGHT: Original booking actions. *@
+                    <div class="booking-actions">
                         <a class="booking-button message-button"
-                           asp-controller="Message"
-                           asp-action="Chat"
+                           asp-controller="Message" asp-action="Chat"
                            asp-route-contactId="@booking.GuestId">
                             <i class="fa-regular fa-comment-dots"></i>
                             Message Guest
                         </a>
 
-                        <form asp-controller="Booking"
-                              asp-action="UpdateRequestStatus"
-                              method="post"
-                              onsubmit="return confirm('Reject this booking request?');">
-
-                            @Html.AntiForgeryToken()
-
-                            <input type="hidden"
-                                   name="bookingId"
-                                   value="@booking.BookingId" />
-
-                            <input type="hidden"
-                                   name="status"
-                                   value="@BookingStatus.Rejected" />
-
-                            <button type="submit"
-                                    class="booking-button reject-button">
-                                <i class="fa-solid fa-xmark"></i>
-                                Reject
-                            </button>
-                        </form>
-
-                        <form asp-controller="Booking"
-                              asp-action="UpdateRequestStatus"
-                              method="post">
-
-                            @Html.AntiForgeryToken()
-
-                            <input type="hidden"
-                                   name="bookingId"
-                                   value="@booking.BookingId" />
-
-                            <input type="hidden"
-                                   name="status"
-                                   value="@BookingStatus.Approved" />
-
-                            <button type="submit"
-                                    class="booking-button approve-button">
-                                <i class="fa-solid fa-check"></i>
-                                Approve
-                            </button>
-                        </form>
-
+                        @if (booking.BookingStatus == BookingStatus.Pending)
+                        {
+                            <form asp-controller="Booking" asp-action="UpdateRequestStatus" method="post"
+                                  onsubmit="return confirm('Reject this booking request?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="bookingId" value="@booking.BookingId" />
+                                <input type="hidden" name="status" value="@BookingStatus.Rejected" />
+                                <button type="submit" class="booking-button reject-button">
+                                    <i class="fa-solid fa-xmark"></i>
+                                    Reject
+                                </button>
+                            </form>
+                            <form asp-controller="Booking" asp-action="UpdateRequestStatus" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="bookingId" value="@booking.BookingId" />
+                                <input type="hidden" name="status" value="@BookingStatus.Approved" />
+                                <button type="submit" class="booking-button approve-button">
+                                    <i class="fa-solid fa-check"></i>
+                                    Approve
+                                </button>
+                            </form>
+                        }
                     </div>
                 </div>
-
             </div>
         }
     }
-
 </div>
