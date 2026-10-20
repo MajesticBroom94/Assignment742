@@ -5,7 +5,7 @@
 
 @{
     ViewBag.Title = "Admin Dashboard";
-    Layout = "_HostLayout";
+    Layout = "_AdminLayout";
 }
 
 <link rel="stylesheet" href="~/css/dashboard.css" />
@@ -165,7 +165,6 @@
                    asp-action="HostApplication"
                    class="dashboard-view-all">
                     View All
-                    <i class="fa-solid fa-arrow-right"></i>
                 </a>
             </div>
 
@@ -239,19 +238,14 @@
 
             <div class="dashboard-section-heading">
                 <h4>Upcoming Bookings</h4>
-            </div>
-            
-            <div class="dashboard-section-heading">
-                <h4>Recent Host Applications</h4>
-
+                
                 <a asp-controller="Booking"
                    asp-action="Index"
                    class="dashboard-view-all">
                     View All
-                    <i class="fa-solid fa-arrow-right"></i>
                 </a>
             </div>
-
+            
             <div class="dashboard-table-container">
                 <table class="dashboard-table">
                     <thead>
