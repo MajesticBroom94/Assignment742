@@ -1,6 +1,8 @@
 ﻿using Assignment742.Data;
+using Assignment742.Domain.Enums;
 using Assignment742.Domain.Models;
 using Assignment742.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,20 +21,26 @@ public class MessageController : Controller
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Chat(string? contactId)
     {
         if (string.IsNullOrEmpty(contactId))
             return RedirectToAction(nameof(Index));
         
-        var currentUser = await _userManager.GetUserAsync(User);
+        var sender = await _userManager.GetUserAsync(User); 
         var receiver = await _userManager.FindByIdAsync(contactId);
 
-        if (currentUser == null || receiver == null)
+        if (sender == null || receiver == null)
             return BadRequest();
+
+        if (sender.Id == receiver.Id)
+        {
+            return RedirectToAction(nameof(Index));
+        }
         
         var data = await _context.Messages
-            .Where(m => m.SenderId == currentUser.Id ||
-                                m.ReceiverId == currentUser.Id)
+            .Where(m => m.SenderId == sender.Id ||
+                                m.ReceiverId == sender.Id)
             .Where(m => m.SenderId == receiver.Id ||
                                 m.ReceiverId == receiver.Id)
             .Select(m => new MessageViewModel
@@ -53,6 +61,7 @@ public class MessageController : Controller
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> Index()
     {
         var currentUser = await _userManager.GetUserAsync(User);
@@ -74,11 +83,8 @@ public class MessageController : Controller
             .Select(u => new MessageHistoryViewModel
             {
                 ContactId = u.Id,
-
                 ContactDetails = u.FirstName + " " + u.LastName,
-
                 ContactProfilePicture = u.ProfilePictureUrl ?? "/Icons/profile.png",
-
                 LastMessage = _context.Messages
                                   .Where(m =>
                                       (m.SenderId == currentUser.Id &&
@@ -96,8 +102,11 @@ public class MessageController : Controller
     }
 
     [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> PostMessage(SendMessageViewModel model)
     {
+        
         if (!ModelState.IsValid)
         {
             TempData["Error"] = "Could not send message";
@@ -110,13 +119,30 @@ public class MessageController : Controller
         if (sender == null || receiver == null)
             return RedirectToAction(nameof(Index));
         
+        if (sender.Id == receiver.Id)
+        {
+            TempData["Error"] = "You cannot send a message to yourself";
+            return RedirectToAction(nameof(Chat), new { contactId = model.ReceiverId });
+        }
+        
         var message = new Message
         {
             SenderId = sender.Id,
             ReceiverId = receiver.Id,
             Content = model.Content,
         };
-        await _context.Messages.AddAsync(message);
+
+        var notify = new Notification
+        {
+            UserId = receiver.Id,
+            Title = $"New Message Received Form {receiver.FirstName} {receiver.LastName}",
+            Type = NotificationType.Message,
+            Status = NotificationStatus.Unread
+        };
+
+        _context.Messages.Add(message);
+        _context.Notifications.Add(notify);
+        
         await _context.SaveChangesAsync();
 
         return RedirectToAction(nameof(Chat), new { contactId = model.ReceiverId });
