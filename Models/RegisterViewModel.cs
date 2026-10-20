@@ -5,7 +5,7 @@ namespace Assignment742.Models;
 public class RegisterViewModel
 {   
     [Required(ErrorMessage = "First name is required")]
-    [StringLength(100)]
+    [StringLength(100,  MinimumLength = 2)]
     [Display(Name = "First name")]
     public string FirstName { get; set; } = string.Empty;
     
@@ -15,6 +15,7 @@ public class RegisterViewModel
     public string LastName { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "Email is required")]
+    [EmailAddress]
     [DataType(DataType.EmailAddress)]
     public string Email { get; set; } = string.Empty;
     
