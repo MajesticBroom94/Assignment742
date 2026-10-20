@@ -4,12 +4,25 @@
 
 @{
     ViewData["Title"] = Model.Title;
-
+    
+    if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
+    {
+        Layout = "_AdminLayout";    
+    }
+    
+    else if (User.IsInRole("Host"))
+    {
+        Layout = "_HostLayout";
+    }
+    
+    else
+    {
+        Layout = "_GuestLayout";
+    }
+    
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
     var showBooking = !isAuthenticated || User.IsInRole("Guest");
-
-    Layout = showBooking ? "_HomeLayout" : "_HostLayout";
-
+    
     var images = (Model.ImageUrls ?? new List<string>())
         .Where(x => !string.IsNullOrWhiteSpace(x))
         .ToList();
@@ -24,7 +37,7 @@
 }
 
 <link rel="stylesheet" href="~/css/propertyDetails.css"/>
-<link rel="stylesheet" href="~/css/popup.css"/>
+<link rel="stylesheet" href="~/css/guestFloatingPopup.css"/>
 
 @if (TempData["BookingError"] != null)
 {
@@ -302,8 +315,7 @@
     </div>
 }
 
-<script src="~/js/popup.js"></script>
-<script src="~/js/fetchCheckinProcess.js"></script>
+<script src="~/js/GuestFloatingPopups.js"></script>
 <script>
     (() => {
         const photos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(images));
@@ -449,7 +461,7 @@
                 CheckOutDate: checkOut.value
             });
             try {
-                const response = await fetch(`/Booking/CheckAvailability?${params}`, {headers: {Accept: 'application/json'}});
+                const response = await fetch(`/Property/CheckAvailability?${params}`, {headers: {Accept: 'application/json'}});
                 if (!response.ok) throw new Error('Availability request failed');
                 const result = await response.json();
                 if (version !== requestVersion) return;
