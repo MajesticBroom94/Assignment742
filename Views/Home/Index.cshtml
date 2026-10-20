@@ -1,12 +1,34 @@
-﻿@model List<PropertyGuestViewModel>
+﻿@model List<HomepageViewModel>
 
 @{
     ViewData["Title"] = "staybnb";
-    Layout = "_HomeLayout";
+    Layout = "_GuestLayout";
 }
 
-<link rel="stylesheet" href="~/css/popup.css">
-<link rel="stylesheet" href="~/css/guestLayout.css">
+<link rel="stylesheet" href="~/css/guestFloatingPopup.css">
+<link rel="stylesheet" href="~/css/guestHomePageLayout.css">
+
+
+@if (TempData["ApplicationError"] != null)
+{
+    <div class="custom-popup custom-popup-error" role="alert">
+        <div class="custom-popup-icon"><i class="fa fa-exclamation-circle"></i></div>
+        <div class="custom-popup-content"><strong>Host Application Error</strong><span>@TempData["ApplicationError"]</span></div>
+    </div>
+}
+
+@if (TempData["HostApplication"] != null)
+{
+    <div class="custom-popup custom-popup-success" role="status">
+        <div class="custom-popup-icon"><i class="fa fa-check-circle"></i></div>
+        <div class="custom-popup-content">
+            <strong>Application Submitted</strong>
+            <span>@TempData["HostApplication"]</span>
+        </div>
+    </div>
+}
+
+@Html.AntiForgeryToken()
 
 <section class="properties-page">
 
@@ -90,8 +112,8 @@
                 <p>There are currently no properties to display. Please check back later.</p>
             </div>
         }
-
     </div>
 </section>
 
-<script src="~/js/popup.js"></script>
+<script src="~/js/GuestFloatingPopups.js"></script>
+<script>closePopup()</script>
