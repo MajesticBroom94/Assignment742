@@ -28,6 +28,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     await RoleSeeder.InitializeAsync(services);
+    await PropertySeeder.InitializeAsync(services);
 }
 
 // Configure the HTTP request pipeline.
