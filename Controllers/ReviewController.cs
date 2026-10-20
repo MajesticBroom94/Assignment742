@@ -2,6 +2,7 @@
 using Assignment742.Domain.Enums;
 using Assignment742.Domain.Models;
 using Assignment742.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public class ReviewController :  Controller
     }
     
     [HttpPost]
+    [Authorize(Roles = "Guest")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SubmitReview(SubmitReviewViewModel model)
     {
@@ -33,15 +35,14 @@ public class ReviewController :  Controller
         if (!ModelState.IsValid)
             return BadRequest("Invalid review details.");
 
-        var propertyId = await _context.Bookings
-            .Where(b =>
-                b.Id == model.BookingId &&
-                b.GuestId == user.Id &&
-                b.Status == BookingStatus.Approved)
-            .Select(b => (int?)b.PropertyId)
+        var property = await _context.Bookings
+            .Where(b => b.Id == model.BookingId &&
+                   b.GuestId == user.Id &&
+                   b.Status == BookingStatus.Approved)
+            .Select(p  => p.Property)
             .FirstOrDefaultAsync();
 
-        if (propertyId == null)
+        if (property == null)
             return NotFound();
 
         var hasCheckOutStatus = await _context.GuestCheckIns
@@ -54,17 +55,38 @@ public class ReviewController :  Controller
         var review = new Review
         {
             ReviewerId = user.Id,
-            PropertyId = propertyId.Value,
+            PropertyId = property.Id,
             Rating = model.Rating,
             Comment = model.Comment.Trim()
         };
 
+        var notification = new Notification
+        {
+            UserId = property.HostId,
+            Title = $"{user.FirstName} {user.LastName} left a review on one of your properties",
+            Type = NotificationType.Review,
+            Status = NotificationStatus.Unread
+        };
+
+        var activity = new ActivityLog
+        {
+            UserId = property.HostId,
+            Action =  "Review",
+            ActivityType =  ActivityType.Create,
+        };
+
+        _context.Notifications.Add(notification);
+        _context.ActivityLogs.Add(activity);
         _context.Reviews.Add(review);
         await _context.SaveChangesAsync();
+        
+        TempData["Success"] = "Success: Your review has been submitted";
 
-        return Ok();
+        return RedirectToAction("Index", "Booking");
     }
-
+    
+    [Authorize(Roles = "Host")]
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
         var host = await _userManager.GetUserAsync(User);
