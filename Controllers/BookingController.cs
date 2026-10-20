@@ -14,18 +14,22 @@ public class BookingController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IWebHostEnvironment _environment;
 
-    public BookingController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<BookingController> logger)
+    public BookingController(ApplicationDbContext context, 
+        UserManager<ApplicationUser> userManager, 
+        IWebHostEnvironment environment)
     {
         _context = context;
         _userManager = userManager;
+        _environment = environment;
+        
     }
 
     
     [HttpGet]
-
-    public async Task<IActionResult> BookingRequest(
-        BookingStatus status = BookingStatus.Pending)
+    [Authorize(Roles = "Host")]
+    public async Task<IActionResult> BookingRequest(BookingStatus status = BookingStatus.Pending)
     {
         var host = await _userManager.GetUserAsync(User);
 
@@ -39,24 +43,42 @@ public class BookingController : Controller
             .Where(b =>
                 b.Property.HostId == host.Id &&
                 b.Status == status)
-            .OrderBy(b => b.CheckInDate)
+            .OrderByDescending(b => b.CreatedOn)
             .Select(b => new BookingRequestViewModel
             {
                 GuestId = b.GuestId,
                 BookingId = b.Id,
+                BookingStatus = b.Status,
                 PropertyTitle = b.Property.Title,
                 PropertyAddress = b.Property.Address,
+                CreatedOn = b.CreatedOn,
                 CheckInDate = b.CheckInDate,
                 CheckOutDate = b.CheckOutDate,
-
-                GuestDetails =
-                    b.Guest.FirstName + " " + b.Guest.LastName,
-
+                GuestDetails = b.Guest.FirstName + " " + b.Guest.LastName,
                 GuestEmail = b.Guest.Email ?? "",
-
+                
                 PaymentStatus = b.Payment != null
                     ? b.Payment.Status
-                    : PaymentStatus.PayLater
+                    : PaymentStatus.PayLater,
+                
+                GuestDocumentId = b.GuestCheckIn == null
+                    ? null : b.GuestCheckIn.GuestDocuments
+                        .OrderByDescending(d => d.Id)
+                        .Select(d => (int?)d.Id)
+                        .FirstOrDefault(),
+
+                GuestDocumentType = b.GuestCheckIn == null
+                    ? null : b.GuestCheckIn.GuestDocuments
+                        .OrderByDescending(d => d.Id)
+                        .Select(d => d.DocumentType)
+                        .FirstOrDefault(),
+
+                GuestDocumentStatus = b.GuestCheckIn == null
+                    ? null : b.GuestCheckIn.GuestDocuments
+                        .OrderByDescending(d => d.Id)
+                        .Select(d => (DocumentStatus?)d.Status)
+                        .FirstOrDefault(),
+                
             })
             .ToListAsync();
 
@@ -64,9 +86,9 @@ public class BookingController : Controller
 
         return View(bookings);
     }
-
     
     [HttpPost]
+    [Authorize(Roles = "Host")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateRequestStatus(int bookingId, BookingStatus status)
     {
@@ -81,9 +103,7 @@ public class BookingController : Controller
         }
 
         var booking = await _context.Bookings
-            .Where(b =>
-                b.Id == bookingId &&
-                b.Property.HostId == host.Id)
+            .Where(b => b.Id == bookingId && b.Property.HostId == host.Id)
             .Include(b => b.Payment)
             .Include(b => b.Property)
             .ThenInclude(hostProperty => hostProperty.CheckInProcess)
@@ -99,6 +119,13 @@ public class BookingController : Controller
             return RedirectToAction(nameof(BookingRequest));
         }
 
+        if (booking.Property.Status != PropertyStatus.Active && status != BookingStatus.Rejected)
+        {
+            TempData["Error"] = $"The property for this booking is {booking.Property.Status}";
+
+            return RedirectToAction(nameof(BookingRequest));
+        }
+
         switch (status)
         {
             // create GuestCheckin
@@ -110,14 +137,81 @@ public class BookingController : Controller
                     Status = CheckInStatus.Pending,
                     CheckInProcessId = booking.Property.CheckInProcess?.Id
                 };
+                
+                var notifyApprove = new Notification
+                {
+                    UserId = booking.GuestId,
+                    Title = $"Booking for the {booking.Property.Title} has been approved",
+                    Type = NotificationType.BookingUpdate,
+                    Status = NotificationStatus.Unread,
+                };
+
+                var logActivityApprove = new ActivityLog
+                {
+                    UserId = host.Id,
+                    Action = "Booking Approved",
+                    ActivityType = ActivityType.Update
+                };
+                
+                _context.Notifications.Add(notifyApprove);
+                _context.ActivityLogs.Add(logActivityApprove);
 
                 booking.GuestCheckIn = guestCheckin;
                 break;
             }
             
-            // change payment to be nopt collected
-            case BookingStatus.Rejected when booking.Payment != null:
-                booking.Payment.Status = PaymentStatus.Refunded;
+            // change payment to be not collected
+            case BookingStatus.Rejected:
+
+                if (booking.Payment != null)
+                {
+                    if (booking.Payment.Status == PaymentStatus.PayLater)
+                    {
+                        booking.Payment.Status = PaymentStatus.Canceled;
+                    }
+                    else if (booking.Payment.Status == PaymentStatus.Canceled)
+                    {
+                        booking.Payment.Status = PaymentStatus.Refunded;
+                        
+                        var notifyRefund = new Notification
+                        {
+                            UserId = booking.GuestId,
+                            Title = $"You have been refunded R {booking.Payment.Amount} for your booking at " +
+                                    $"{booking.Property.Title}",
+                            Type = NotificationType.BookingUpdate,
+                            Status = NotificationStatus.Unread,
+                        };
+                        
+                        var logActivityRefund = new ActivityLog
+                        {
+                            UserId = host.Id,
+                            Action =  "Booking Refund Processed",
+                            ActivityType = ActivityType.Update
+                        };
+
+                        _context.Notifications.Add(notifyRefund);
+                        _context.ActivityLogs.Add(logActivityRefund);
+                    }
+                }
+                
+                var notifyReject = new Notification
+                {
+                    UserId = booking.GuestId,
+                    Title = $"Booking for the {booking.Property.Title} was rejected",
+                    Type = NotificationType.BookingUpdate,
+                    Status = NotificationStatus.Unread,
+                };
+
+                var logActivityReject = new ActivityLog
+                {
+                    UserId = host.Id,
+                    Action = "Booking Rejected",
+                    ActivityType = ActivityType.Update
+                };
+                
+                _context.Notifications.Add(notifyReject);
+                _context.ActivityLogs.Add(logActivityReject);
+                
                 break;
         }
 
@@ -133,6 +227,7 @@ public class BookingController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Guest")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Checkin(int bookingId)
     {
@@ -143,6 +238,8 @@ public class BookingController : Controller
 
         var guestCheckIn = await _context.GuestCheckIns
             .Where(b => b.Booking.GuestId == user.Id && b.BookingId == bookingId)
+            .Include(b => b.Booking)
+            .ThenInclude(b => b.Property)
             .FirstOrDefaultAsync();
 
         if (guestCheckIn == null)
@@ -151,9 +248,36 @@ public class BookingController : Controller
         }
         
         if (guestCheckIn.Status != CheckInStatus.Pending)
-            return BadRequest();
+            return BadRequest("Invalid status on the guest checkin workflow");
+        
+        var hasValidDocument = await _context.GuestDocuments
+            .AnyAsync(d => d.GuestCheckIn.BookingId == bookingId &&
+                                       d.GuestCheckIn.Booking.GuestId == user.Id &&
+                                       d.Status == DocumentStatus.Valid);
+
+        if (!hasValidDocument)
+            return BadRequest("No valid guest documentation was found");
 
         guestCheckIn.Status = CheckInStatus.CheckedIn;
+        
+        var notify = new Notification
+        {
+            UserId = guestCheckIn.Booking.Property.HostId,
+            Title = $"Guest has checked in for their booking at {guestCheckIn.Booking.Property.Title}" +
+                    $" [Booking id: {guestCheckIn.Booking.Id}]",
+            Type = NotificationType.CheckIn,
+            Status = NotificationStatus.Unread,
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = user.Id,
+            Action = "Guest Check In",
+            ActivityType = ActivityType.Update
+        };
+        
+        _context.Notifications.Add(notify);
+        _context.ActivityLogs.Add(logActivity);
         
         await _context.SaveChangesAsync();
         
@@ -163,6 +287,7 @@ public class BookingController : Controller
     }
     
     [HttpPost]
+    [Authorize(Roles = "Guest")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Checkout(int bookingId)
     {
@@ -173,6 +298,7 @@ public class BookingController : Controller
 
         var guestCheckIn = await _context.GuestCheckIns
             .Where(b => b.Booking.GuestId == user.Id && b.BookingId == bookingId)
+            .Include(b => b.Booking.Property)
             .FirstOrDefaultAsync();
 
         if (guestCheckIn == null)
@@ -185,6 +311,25 @@ public class BookingController : Controller
 
         guestCheckIn.Status = CheckInStatus.CheckedOut;
         
+        var notify = new Notification
+        {
+            UserId = guestCheckIn.Booking.Property.HostId,
+            Title = $"Guest has checked out for their booking at {guestCheckIn.Booking.Property.Title}" +
+                    $" [Booking id: {guestCheckIn.Booking.Id}]",
+            Type = NotificationType.CheckOut,
+            Status = NotificationStatus.Unread,
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = user.Id,
+            Action = "Guest Check Out",
+            ActivityType = ActivityType.Update
+        };
+        
+        _context.Notifications.Add(notify);
+        _context.ActivityLogs.Add(logActivity);
+        
         await _context.SaveChangesAsync();
         
         TempData["Success"] = "Success: You have been checked out.";
@@ -193,6 +338,7 @@ public class BookingController : Controller
     
 
     [HttpPost]
+    [Authorize(Roles = "Guest")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ProcessPayment(int bookingId)
     {
@@ -204,6 +350,7 @@ public class BookingController : Controller
         var booking = await  _context.Bookings
             .Where(b => b.Id == bookingId && b.GuestId == user.Id)
             .Include(b => b.Payment)
+            .Include(b => b.Property)
             .FirstOrDefaultAsync();
         
         if (booking == null)
@@ -230,6 +377,24 @@ public class BookingController : Controller
         {
             return BadRequest();
         }
+        
+        var notify = new Notification
+        {
+            UserId = booking.Property.HostId,
+            Title = "Payment received for booking id: " + booking.Id,
+            Type = NotificationType.UserPromotion,
+            Status = NotificationStatus.Unread,
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = user.Id,
+            Action = "Payment received",
+            ActivityType = ActivityType.Update
+        };
+            
+        _context.Notifications.Add(notify);
+        _context.ActivityLogs.Add(logActivity);
 
         await _context.SaveChangesAsync();
 
@@ -240,13 +405,10 @@ public class BookingController : Controller
     
     
     [HttpPost]
+    [Authorize(Roles = "Guest")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateBookingViewModel model)
     {
-        if (User.Identity is { IsAuthenticated: false })
-        {
-            
-        }
         
         if (!ModelState.IsValid)
         {
@@ -260,6 +422,11 @@ public class BookingController : Controller
         if (guest == null)
         {
             return Challenge();
+        }
+
+        if (model.PaymentOption != PaymentStatus.PayLater && model.PaymentOption != PaymentStatus.Completed)
+        {
+            return BadRequest();
         }
         
         // check date is not backdated
@@ -319,7 +486,8 @@ public class BookingController : Controller
         var serviceFee = accommodationPrice * 0.10m;
         var totalPrice = accommodationPrice + serviceFee;
         
-
+        
+        // BOOKING
         var booking = new Booking
         {
             GuestId = guest.Id,
@@ -329,8 +497,31 @@ public class BookingController : Controller
             TotalPrice = totalPrice,
             Status = BookingStatus.Pending
         };
-
+        
+        // create the notification for property owner
+        string message = $"New reservation received for: {property.Title}\n" +
+                         $"Please react on this request as soon as possible";
+        
+        var notificationBookingRequest = new Notification
+        {
+            UserId = property.HostId,
+            Title = message,
+            Status = NotificationStatus.Unread,
+            Type = NotificationType.BookingRequest
+        };
+        
+        // LOGGING
+        var logActivityBooking = new ActivityLog
+        {
+            UserId = guest.Id,
+            Action = "New Booking",
+            ActivityType = ActivityType.Create
+        };
+        
         _context.Bookings.Add(booking);
+        _context.Notifications.Add(notificationBookingRequest);
+        _context.ActivityLogs.Add(logActivityBooking);
+        
 
         var affectedRows = await _context.SaveChangesAsync();
 
@@ -340,96 +531,39 @@ public class BookingController : Controller
             return RedirectToAction("Details", "Property", new { id = model.PropertyId });
         }
         
+        // PAYMENT
         var payment = new Payment
         {
             BookingId = booking.Id,
             Amount = booking.TotalPrice,
             Status = model.PaymentOption
         };
-
-        _context.Payments.Add(payment);
-            
-        await _context.SaveChangesAsync();
-
-        // create the notification for property owner
-        string message = $"New reservation received for: {property.Title}\n" +
-                         $"You can approve this request under 'Bookings Request'";
         
-        var notification = new Notification
+        var notificationBookingPayment = new Notification
         {
             UserId = property.HostId,
-            Title = message,
+            Title = $"Payment received from {guest.FirstName} ({guest.Email}) for booking Id: {booking.Id}",
             Status = NotificationStatus.Unread,
             Type = NotificationType.BookingRequest
         };
         
-        _context.Notifications.Add(notification);
+        var logActivityPayment = new ActivityLog
+        {
+            UserId = guest.Id,
+            Action = $"New Payment Created: Status - {payment.Status} ",
+            ActivityType = ActivityType.Create
+        };
+        
+        _context.Payments.Add(payment);
+        _context.Notifications.Add(notificationBookingPayment);
+        _context.ActivityLogs.Add(logActivityPayment);
+        
         await _context.SaveChangesAsync();
         
         TempData["BookingConfirmation"] = "Your Reservation Has Been Submitted";
         return RedirectToAction("Details", "Property", new { id = model.PropertyId });
     }
-    
-    [HttpGet]
-    public async Task<IActionResult> CheckAvailability(
-        int propertyId,
-        DateTime checkInDate,
-        DateTime checkOutDate)
-    {
-        // Basic date validation
-        if (checkOutDate <= checkInDate)
-        {
-            return Json(new
-            {
-                available = false,
-                message = "Check-out date must be after check-in date."
-            });
-        }
-
-        if (checkInDate < DateTime.Today)
-        {
-            return Json(new
-            {
-                available = false,
-                message = "Check-in date cannot be in the past."
-            }); 
-        }
-        
-        var propertyExists = await _context.HostProperties
-            .AnyAsync(p => p.Id == propertyId);
-
-        if (!propertyExists)
-        {
-            return Json(new
-            {
-                available = false,
-                message = "Property could not be found."
-            });
-        }
-
-        // Check for overlapping bookings
-        var hasConflict = await _context.Bookings
-            .AnyAsync(b =>
-                b.PropertyId == propertyId &&
-                b.CheckInDate < checkOutDate &&
-                b.CheckOutDate > checkInDate &&
-                b.Status != BookingStatus.Rejected);
-
-        if (hasConflict)
-        {
-            return Json(new
-            {
-                available = false,
-                message = "The property is not available for the selected date range"
-            });
-        }
-
-        return Json(new
-        {
-            available = true,
-            message = "The property is available to reserve!"
-        });
-    }
+ 
 
     [Authorize(Roles = "Admin, SuperAdmin, Guest")]
     [HttpGet]
@@ -443,6 +577,8 @@ public class BookingController : Controller
         
         var isAdmin = User.IsInRole("Admin") ||  User.IsInRole("SuperAdmin");
 
+        
+        // query start
         var query = _context.Bookings.AsQueryable();
 
         if (!isAdmin)
@@ -453,10 +589,15 @@ public class BookingController : Controller
             query = query.Where(b => b.Id == filterId.Value);
         }
       
-        var booking = await query.Select(b => new BookingViewModel
+        var booking = await query
+            .OrderByDescending(b=>b.CreatedOn)
+            .Select(b => new BookingViewModel
         {
             BookingId = b.Id,
             HostId = b.Property.HostId,
+            BookingDate = b.CreatedOn,
+            guestDetails = b.Guest.FirstName + " " + b.Guest.LastName,
+            guestEmail =  b.Guest.Email ?? string.Empty,
             PropertyTitle =  b.Property.Title,
             PropertyAddress =  b.Property.Address,
             CheckInDate = b.CheckInDate,
@@ -467,6 +608,19 @@ public class BookingController : Controller
             PaymentStatus = b.Payment == null ? PaymentStatus.PayLater : b.Payment.Status,
             CheckInProcessId = b.GuestCheckIn == null ? null : b.GuestCheckIn.CheckInProcessId,
             CheckInStatus = b.GuestCheckIn == null ? null : b.GuestCheckIn.Status,
+            
+            LatestDocumentStatus = b.GuestCheckIn == null ? null : _context.GuestDocuments
+                    .Where(d => d.GuestCheckInId == b.GuestCheckIn.Id)
+                    .OrderByDescending(d => d.Id)
+                    .Select(d => (DocumentStatus?)d.Status)
+                    .FirstOrDefault(),
+            
+            HasGuestDocument = b.GuestCheckIn != null && _context.GuestDocuments.Any(doc =>
+                                   doc.GuestCheckInId == b.GuestCheckIn.Id),
+
+            HasValidGuestDocument = b.GuestCheckIn != null && _context.GuestDocuments.Any(doc =>
+                                        doc.GuestCheckInId == b.GuestCheckIn.Id &&
+                                        doc.Status == DocumentStatus.Valid),
         })
         .ToListAsync();
         
@@ -474,6 +628,7 @@ public class BookingController : Controller
     }
     
     [HttpGet]
+    [Authorize(Roles = "Guest")]
     public async Task<IActionResult> BookingCheckinSteps(int bookingId)
     {
         var user = await _userManager.GetUserAsync(User);
@@ -482,15 +637,17 @@ public class BookingController : Controller
             return Challenge();
 
         var bookingExists = await _context.Bookings
-            .AnyAsync(b => b.Id == bookingId &&
-                                  b.GuestId == user.Id &&
-                                  b.Status == BookingStatus.Approved);
+            .AnyAsync(b =>
+                b.Id == bookingId &&
+                b.GuestId == user.Id &&
+                b.Status == BookingStatus.Approved);
 
         if (!bookingExists)
             return NotFound();
 
         var process = await _context.GuestCheckIns
-            .Where(c => c.BookingId == bookingId)
+            .Where(c => c.BookingId == bookingId &&
+                                    c.CheckInProcess != null)
             .Select(c => new
             {
                 c.CheckInProcess!.Title,
@@ -499,9 +656,19 @@ public class BookingController : Controller
             .FirstOrDefaultAsync();
 
         if (process == null)
-            return NotFound("No check-in instructions available.");
+        {
+            return Json(new
+            {
+                title = "Check-in Instructions",
+                steps = new List<string>
+                {
+                    "No check-in instructions are available for this property."
+                }
+            });
+        }
 
-        var steps = JsonSerializer.Deserialize<List<string>>(process.StepsJson) ?? new List<string>();
+        var steps = JsonSerializer.Deserialize<List<string>>(
+            process.StepsJson) ?? new List<string>();
 
         return Json(new
         {
@@ -509,4 +676,297 @@ public class BookingController : Controller
             steps
         });
     }
+    
+    
+    [HttpGet]
+    [Authorize(Roles = "Host")]
+    public async Task<IActionResult> ViewGuestDocument(int documentId)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
+
+        var document = await _context.GuestDocuments
+            .Where(d => d.Id == documentId &&
+                        d.GuestCheckIn.Booking.Property.HostId == user.Id &&
+                        d.GuestCheckIn.Booking.Status == BookingStatus.Approved)
+            .Select(d => new
+            {
+                d.FileName
+            })
+            .FirstOrDefaultAsync();
+
+        if (document == null)
+            return NotFound();
+
+        var directory = Path.Combine(
+            _environment.ContentRootPath,
+            "PrivateGuestDocuments");
+
+        // Only allow the stored filename, not a filesystem path.
+        var filePath = Path.Combine(
+            directory,
+            Path.GetFileName(document.FileName));
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound("Document file not found.");
+
+        var extension = Path.GetExtension(document.FileName).ToLowerInvariant();
+
+        var contentType = extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            _ => null
+        };
+
+        if (contentType == null)
+            return BadRequest("Unsupported document format.");
+
+        return PhysicalFile(filePath, contentType);
+    }
+    
+    [HttpPost]
+    [Authorize(Roles = "Host")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateDocumentStatus(int documentId, DocumentStatus status)
+    {
+        if (status != DocumentStatus.Valid && status != DocumentStatus.Invalid)
+            return BadRequest();
+
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
+        
+        var guestDocument  = await _context.GuestDocuments
+            .Where(d => d.Id == documentId && d.GuestCheckIn.Booking.Property.HostId == user.Id)
+            .Include(d => d.GuestCheckIn)
+            .ThenInclude(g => g.Booking)
+            .FirstOrDefaultAsync();
+        
+        if (guestDocument == null)
+            return NotFound();
+
+        if (guestDocument.Status != DocumentStatus.Pending)
+            return BadRequest("This document has already been reviewed.");
+
+        
+        // change the status
+        guestDocument.Status = status;
+
+        // booking info
+        var bookingData = guestDocument.GuestCheckIn.Booking;
+        
+        var notification = new Notification
+        {
+            UserId = bookingData.GuestId,
+            Title = $"Your uploaded document for booking {bookingData.Id} is " +
+                    $"{(guestDocument.Status == DocumentStatus.Valid ? "valid" : "not valid")}",
+            Status = NotificationStatus.Unread,
+            Type = NotificationType.GuestDocument
+        };
+
+        var logActivity = new ActivityLog
+        {
+            UserId = user.Id,
+            Action = $"{guestDocument.Status} guest booking document",
+            ActivityType = ActivityType.Update
+        };
+
+        _context.Notifications.Add(notification);
+        _context.ActivityLogs.Add(logActivity);
+        
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = "Document status updated.";
+
+        return RedirectToAction("BookingRequest", new
+        {
+            status = BookingStatus.Approved
+        });
+    }
+    
+    
+    [HttpPost]
+    [Authorize(Roles = "Guest")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> UploadGuestDocument(
+        int bookingId,
+        string documentType,
+        IFormFile? document)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user == null)
+            return Challenge();
+
+        var guestCheckIn = await _context.GuestCheckIns
+            .FirstOrDefaultAsync(g =>
+                g.BookingId == bookingId &&
+                g.Booking.GuestId == user.Id &&
+                g.Booking.Status == BookingStatus.Approved);
+
+        if (guestCheckIn == null)
+            return Forbid();
+
+        var redirect = RedirectToAction("Index", new { filterId = bookingId });
+
+        // Prevent uploading after check-out
+        if (guestCheckIn.Status == CheckInStatus.CheckedOut)
+        {
+            TempData["Error"] = "Documents cannot be uploaded after check-out.";
+            return redirect;
+        }
+
+        // Only allow another upload after rejection
+        var latestStatus = await _context.GuestDocuments
+            .Where(d => d.GuestCheckInId == guestCheckIn.Id)
+            .OrderByDescending(d => d.Id)
+            .Select(d => (DocumentStatus?)d.Status)
+            .FirstOrDefaultAsync();
+
+        if (latestStatus is DocumentStatus.Valid or DocumentStatus.Pending)
+        {
+            TempData["Error"] = "A document is already approved or awaiting verification.";
+            return redirect;
+        }
+
+        if (string.IsNullOrWhiteSpace(documentType) ||
+            documentType.Length > 100)
+        {
+            TempData["Error"] = "Please provide a valid document type.";
+            return redirect;
+        }
+
+        if (document == null || document.Length == 0)
+        {
+            TempData["Error"] = "Please select a document.";
+            return redirect;
+        }
+
+        const long maxFileSize = 5 * 1024 * 1024;
+
+        if (document.Length > maxFileSize)
+        {
+            TempData["Error"] = "The document cannot exceed 5 MB.";
+            return redirect;
+        }
+
+        var extension = Path.GetExtension(document.FileName).ToLowerInvariant();
+
+        var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            TempData["Error"] = "Only PDF, JPG and PNG files are supported.";
+            return redirect;
+        }
+
+        // Check basic file signatures, not only the extension
+        var header = new byte[8];
+
+        using (var stream = document.OpenReadStream())
+        {
+            var bytesRead = await stream.ReadAsync(header.AsMemory());
+
+            if (bytesRead < 4)
+            {
+                TempData["Error"] = "The uploaded file is invalid.";
+                return redirect;
+            }
+        }
+
+        bool validFile = extension switch
+        {
+            ".pdf" => header.AsSpan(0, 4)
+                .SequenceEqual(new byte[] { 0x25, 0x50, 0x44, 0x46 }),
+
+            ".jpg" or ".jpeg" => header.AsSpan(0, 3)
+                .SequenceEqual(new byte[] { 0xFF, 0xD8, 0xFF }),
+
+            ".png" => header.AsSpan(0, 8)
+                .SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47,
+                                            0x0D, 0x0A, 0x1A, 0x0A }),
+
+            _ => false
+        };
+
+        if (!validFile)
+        {
+            TempData["Error"] = "The file contents do not match its extension.";
+            return redirect;
+        }
+
+        // Store privately, outside wwwroot
+        var uploadDirectory = Path.Combine(
+            _environment.ContentRootPath,
+            "PrivateGuestDocuments");
+
+        Directory.CreateDirectory(uploadDirectory);
+
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var filePath = Path.Combine(uploadDirectory, fileName);
+
+        try
+        {
+            await using (var stream = new FileStream(
+                filePath, FileMode.CreateNew))
+            {
+                await document.CopyToAsync(stream);
+            }
+
+            var guestDocument = new GuestDocument
+            {
+                GuestCheckInId = guestCheckIn.Id,
+                DocumentType = documentType.Trim(),
+                FileName = fileName,
+                Status = DocumentStatus.Pending
+            };
+            
+            _context.GuestDocuments.Add(guestDocument);
+
+
+            var bookingData = await _context.Bookings
+                .Where(b => b.Id == bookingId)
+                .Include(b => b.Property)
+                .FirstAsync();
+            
+            var notification = new Notification
+            {
+                UserId = bookingData.Property.HostId,
+                Title = $"A document was uploaded for booking {bookingData.Id}\n" +
+                        $"Please review these documents as soon as possible",
+                Status = NotificationStatus.Unread,
+                Type = NotificationType.GuestDocument
+            };
+
+            var logActivity = new ActivityLog
+            {
+                UserId = user.Id,
+                Action = $"Document uploaded for booking {bookingData.Id}",
+                ActivityType = ActivityType.Create
+            };
+
+            _context.Notifications.Add(notification);
+            _context.ActivityLogs.Add(logActivity);
+            
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            if (System.IO.File.Exists(filePath))
+                System.IO.File.Delete(filePath);
+
+            throw;
+        }
+
+        TempData["Success"] = "Document uploaded successfully. Awaiting host verification.";
+
+        return redirect;
+    }
+
 }
